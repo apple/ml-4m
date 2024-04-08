@@ -1,0 +1,51 @@
+# Mixture of: alpha 1.0, alpha 0.2, caption biased, and tok_rgb@224->tok_rgb@448 biased
+
+# Sequences
+caption:
+  input_alphas: [0.05, 5.0, 0.2, 1.0]
+  target_alphas: [0.0, 0.0, 0.0, 0.0]
+  keep: ['random', 'all', 'random', 'random']
+det:
+  input_alphas: [0.05, 0.05, 0.2, 1.0]
+  target_alphas: [0.0, 0.0, 0.0, 0.0]
+  keep: ['random', 'random', 'random', 'random']
+
+# 224 resolution. They are never used as targets -> target_alphas are 0
+rgb@224:
+  input_alphas: [0.05, 0.05, 0.2, 1.0]
+  target_alphas: [0.0, 0., 0., 0.]
+tok_rgb@224:
+  input_alphas: [5.0, 0.05, 0.2, 1.0]
+  target_alphas: [0.0, 0.0, 0.0, 0.0]
+tok_depth@224:
+  input_alphas: [0.05, 0.05, 0.2, 1.0]
+  target_alphas: [0.0, 0.0, 0.0, 0.0]
+tok_semseg@224:
+  input_alphas: [0.05, 0.05, 0.2, 1.0]
+  target_alphas: [0.0, 0.0, 0.0, 0.0]
+tok_normal@224:
+  input_alphas: [0.05, 0.05, 0.2, 1.0]
+  target_alphas: [0.0, 0.0, 0.0, 0.0]
+tok_clip@224:
+  input_alphas: [0.05, 0.05, 0.2, 1.0]
+  target_alphas: [0.0, 0.0, 0.0, 0.0]
+
+# 448 resolution
+rgb@448:
+  input_alphas: [0.05, 0.05, 0.2, 1.0]
+  target_alphas: [0., 0., 0., 0.]  # RGB is not a target
+tok_rgb@448:
+  input_alphas: [5.0, 0.05, 0.2, 1.0]
+  target_alphas: [5.0, 1.0, 1.0, 1.0]
+tok_depth@448:
+  input_alphas: [0.05, 0.05, 0.2, 1.0]
+  target_alphas: [0.05, 1.0, 1.0, 1.0]
+tok_semseg@448:
+  input_alphas: [0.05, 0.05, 0.2, 1.0]
+  target_alphas: [0.05, 1.0, 1.0, 1.0]
+tok_normal@448:
+  input_alphas: [0.05, 0.05, 0.2, 1.0]
+  target_alphas: [0.05, 1.0, 1.0, 1.0]
+tok_clip@448:
+  input_alphas: [0.05, 0.05, 0.2, 1.0]
+  target_alphas: [0.05, 1.0, 1.0, 1.0]

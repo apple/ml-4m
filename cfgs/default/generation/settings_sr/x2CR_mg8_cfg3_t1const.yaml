@@ -1,0 +1,24 @@
+sr_name: auto
+
+# Condition & target domains
+sr_cond_domains: null # Set to null to condition on base model conditions and generated targets
+sr_target_domains: tok_clip@448-tok_rgb@448
+
+# Generation settings
+sr_tokens_per_target: 784
+sr_autoregression_schemes: maskgit
+sr_decoding_steps: 8
+sr_token_decoding_schedules: cosine
+
+# Temperature settings
+sr_temps: 1.0
+sr_temp_schedules: constant
+
+# Classifier-free guidance settings
+sr_cfg_scales: 3.0
+sr_cfg_schedules: constant
+sr_cfg_grow_conditioning: True
+
+# Top-k & top-p sampling settings
+sr_top_p: 0.9
+sr_top_k: 0.0

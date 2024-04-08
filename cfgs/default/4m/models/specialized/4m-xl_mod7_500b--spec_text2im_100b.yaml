@@ -1,0 +1,51 @@
+# Config for FSDP
+
+# Adaptation of 4M-XL model for text2im (biased towards captions as input)
+run_name: auto
+
+# Input
+finetune: '/path/to/trained/4m-xl/checkpoint' # Change me
+
+# Input & Output
+min_input_tokens: 64
+num_input_tokens: 256
+min_target_tokens: 256
+num_target_tokens: 256
+loss_type: mod
+
+# Architecture
+model: fm_xlarge_24e_24d_swiglu_nobias
+patch_size: 16
+input_size: 224
+dtype: bfloat16
+tokenizer_path: "fourm/utils/tokenizer/trained/text_tokenizer_4m_wordpiece_30k.json"
+
+# Train
+epochs: -1
+total_tokens: 100 # in Billions
+opt: adamw
+blr: 0.00002 # this is base_lr = 2e-5, lr = base_lr * batch_size / 256
+min_blr: 0.
+warmup_epochs: -1
+warmup_tokens: 5 # in Billions
+batch_size: 32 
+use_act_checkpoint: True # 32 x 128 = 4096
+clip_grad: 3.0
+skip_nan_grad: True
+
+# Data
+data_config: "cfgs/default/4m/data/cc12m/specialized/mix_caption_bias_a0.2_a1.0.yaml"
+s3_data_endpoint: "/path/to/endpoint" # Change me
+eval_freq: 1
+fixed_eval: True
+epoch_size: 10_000_000 # Number of samples per "epoch"
+
+# Saving
+save_ckpt_freq: 1 # Change if needed
+output_dir: 'output/auto' # Change if needed
+
+# Wandb
+log_wandb: False # Set to True to log to Weights & Biases
+wandb_project: '4m-train'
+wandb_entity: null # Change if needed
+wandb_run_name: auto # Change if needed

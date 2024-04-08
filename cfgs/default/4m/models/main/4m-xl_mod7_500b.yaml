@@ -1,0 +1,48 @@
+# Config for FSDP
+
+# Arch: SwiGLU No Bias
+# Modalities: Mix of rgb2all and all2all, with alphas=0.5
+# To be run on 128 GPUs for batch size = 8192
+run_name: auto
+
+# Input & output
+num_input_tokens: 128
+num_target_tokens: 128
+loss_type: mod
+
+# Architecture
+model: fm_xlarge_24e_24d_swiglu_nobias
+patch_size: 16
+input_size: 224
+dtype: bfloat16
+tokenizer_path: "fourm/utils/tokenizer/trained/text_tokenizer_4m_wordpiece_30k.json"
+
+# Train
+epochs: -1
+total_tokens: 500 # in billions
+opt: adamw
+blr: 0.00002 # this is base_lr = 2e-5, lr = base_lr * batch_size / 256
+min_blr: 0.
+warmup_epochs: -1
+warmup_tokens: 10 # in billions
+batch_size: 64 # 64 x 128 = 8192
+use_act_checkpoint: True  
+clip_grad: 3.0
+skip_nan_grad: True
+
+# Data
+data_config: "cfgs/default/4m/data/cc12m/main/mix_mod7_all2all_rgb2all_a0.5.yaml"
+s3_data_endpoint: "/path/to/endpoint" # Change me
+eval_freq: 1
+fixed_eval: True
+epoch_size: 10_000_000 # Number of samples per "epoch"
+
+# Saving
+save_ckpt_freq: 1 # Change if needed
+output_dir: 'output/auto' # Change if needed
+
+# Wandb
+log_wandb: False # Set to True to log to Weights & Biases
+wandb_project: '4m-train'
+wandb_entity: null # Change if needed
+wandb_run_name: auto # Change if needed

@@ -1,0 +1,13 @@
+*.swp
+**/__pycache__/**
+.dumbo.json
+.idea/*
+**/.ipynb_checkpoints/**
+output/
+wandb/
+.vscode/
+*.pth
+*.DS_Store
+tokenizer_ckpts/
+*pkl
+*.egg-info

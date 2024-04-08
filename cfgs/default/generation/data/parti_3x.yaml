@@ -1,0 +1,7 @@
+data_name: auto
+
+# Data settings
+num_samples: null
+num_variations: 3 # Generate 3 variations of each prompt
+num_log_images: 'all'
+data_path: parti_prompts

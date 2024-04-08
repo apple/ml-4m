@@ -1,0 +1,22 @@
+# Models (Hugging Face Hub ID, or path to local safetensors checkpoint)
+model: EPFL-VILAB/4M-7_XL_CC12M
+sr_model: EPFL-VILAB/4M-7-SR_L_CC12M
+
+image_size: 224
+image_size_metrics: 256
+
+# Tokenizers (Hugging Face Hub ID, or path to local safetensors checkpoint)
+rgb_tok_id: EPFL-VILAB/4M_tokenizers_rgb_16k_224-448
+depth_tok_id: EPFL-VILAB/4M_tokenizers_depth_8k_224-448
+normal_tok_id: EPFL-VILAB/4M_tokenizers_normal_8k_224-448
+semseg_tok_id: EPFL-VILAB/4M_tokenizers_semseg_4k_224-448
+clip_tok_id: EPFL-VILAB/4M_tokenizers_CLIP-B16_8k_224-448
+text_tok_path: fourm/utils/tokenizer/trained/text_tokenizer_4m_wordpiece_30k.json
+detokenizer_steps: 50
+
+# Wandb logging
+log_wandb: False # Set to True to log to Weights & Biases
+wandb_project: '4m-generation'
+wandb_entity: null # Change if needed
+wandb_run_name: auto
+output_dir: 'output/auto'

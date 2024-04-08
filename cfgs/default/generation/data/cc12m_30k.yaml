@@ -1,0 +1,6 @@
+data_name: auto
+
+# Data settings
+num_samples: 30000
+num_variations: 1
+data_path: /path/to/cc12m/val

@@ -1,0 +1,25 @@
+# Config for chained generation
+name: auto
+
+# Condition & target domains
+cond_domains: caption
+target_domains: tok_clip@224-tok_rgb@224
+
+# Generation settings
+tokens_per_target: 196
+autoregression_schemes: roar-roar
+decoding_steps: 49-25
+token_decoding_schedules: linear
+
+# Temperature settings
+temps: 6.0-0.5
+temp_schedules: onex:0.5:0.5-constant
+
+# Classifier-free guidance settings
+cfg_scales: 3.0
+cfg_schedules: constant
+cfg_grow_conditioning: True
+
+# Top-k & top-p sampling settings
+top_p: 0.9
+top_k: 0.0

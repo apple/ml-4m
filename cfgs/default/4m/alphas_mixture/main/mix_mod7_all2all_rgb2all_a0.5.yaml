@@ -1,0 +1,27 @@
+# Half of all samples from this mixture are rgb2all, half are all2all
+rgb@224:
+  input_alphas: [1000.0, 0.5]
+  target_alphas: [0., 0.]  # RGB is not a target
+tok_rgb@224:
+  input_alphas: [0., 0.5]
+  target_alphas: [0.5, 0.5]
+tok_depth@224:
+  input_alphas: [0., 0.5]
+  target_alphas: [0.5, 0.5]
+tok_semseg@224:
+  input_alphas: [0., 0.5]
+  target_alphas: [0.5, 0.5]
+tok_normal@224:
+  input_alphas: [0., 0.5]
+  target_alphas: [0.5, 0.5]
+tok_clip@224:
+  input_alphas: [0., 0.5]
+  target_alphas: [0.5, 0.5]
+caption:
+  input_alphas: [0., 0.5]
+  target_alphas: [0.5, 0.5]
+  keep: ['random', 'random']
+det:
+  input_alphas: [0., 0.5]
+  target_alphas: [0.5, 0.5]
+  keep: ['random', 'random']

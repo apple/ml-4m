@@ -1,0 +1,6 @@
+data_name: auto
+
+# Data settings
+num_samples: 30000
+num_variations: 1
+data_path: /path/to/coco/val # Expects the data in the same format as 4M uses (non-sharded), e.g. coco/val/caption/all/COCO_val2014_000000000042.json etc...

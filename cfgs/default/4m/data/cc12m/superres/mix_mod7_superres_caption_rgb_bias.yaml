@@ -1,0 +1,44 @@
+train:
+  datasets:
+    cc12m:
+      type: multimodal
+
+      # Input and output domain names, separated by hyphen
+      in_domains: caption-det-rgb@224-tok_rgb@224-tok_depth@224-tok_semseg@224-tok_normal@224-tok_clip@224-rgb@448-tok_rgb@448-tok_depth@448-tok_semseg@448-tok_normal@448-tok_clip@448
+      out_domains: tok_rgb@448-tok_depth@448-tok_semseg@448-tok_normal@448-tok_clip@448
+
+      # Dirichlet alphas concentration parameter for input and output. 
+      # Can be either one value, or one value per input modality separated by hyphen.
+      input_alphas: null
+      target_alphas: null
+      # Path to specific alphas configuration to enable mixture of Dirichlets. 
+      # If provided, overrides input_alphas and target_alphas
+      alphas_config: "cfgs/default/4m/alphas_mixture/superres/mix_mod7_superres_caption_rgb_bias"
+
+      # Optionally, min_input_tokens, min_target_tokens, num_input_tokens, num_target_tokens can be specified here
+      # If so, they will override the values provided in the main config
+
+      # Data can either be local or on cloud storage (e.g. S3), see data docs for more info
+      # Use braceexpand notation to indicate shard range (e.g. shard-{0000..9999}.tar)
+      # Use brackets to indicate multiple modalities (e.g. [modality1,modality2,modality3]) 
+      data_path: 'path/to/training/data/[modality1,modality2,modality3]/shard-{00000..9999}.tar' 
+      use_wds: True # Use webdataset
+      wds_n_repeats: 4 # Number of repeats for webdataset loader to improve efficiency
+      wds_shuffle_buffer_tar: 1_000 # Webdatasets shuffle buffer after loading tar files
+      wds_shuffle_buffer_repeat: 1_000 # Webdatasets shuffle buffer after repeating samples
+      
+      main_augment_domain: rgb@224 # Select from which modality to get the original full image size (mostly important for resizing bounding boxes)
+      aligned_captions: True # Align captions to crop_settings
+      tok_train_aug: True # Apply data augmentation to tokens (if multiple crop settings are available)
+
+      # modality_name_map: # Use modality_name_map to define a mapping from a folder name to a modality name
+      #   tok_rgb_folder_name: tok_rgb@224
+      #   tok_depth_folder_nme: tok_depth@224
+      #   ...
+
+  weights: [1.0] # Sampling weights for the training datasets
+  
+val:
+  datasets:
+    cc12m: 
+      data_path: 'path/to/val/data'

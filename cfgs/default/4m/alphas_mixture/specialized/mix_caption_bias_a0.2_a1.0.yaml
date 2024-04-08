@@ -1,0 +1,27 @@
+# 1/3 of all samples from this mixture are heavily biased towards captions in the input
+rgb@224:
+  input_alphas: [0.05, 0.2, 1.0]
+  target_alphas: [0., 0., 0.]  # RGB is not a target
+tok_rgb@224:
+  input_alphas: [0.05, 0.2, 1.0]
+  target_alphas: [1.0, 1.0, 1.0]
+tok_depth@224:
+  input_alphas: [0.05, 0.2, 1.0]
+  target_alphas: [1.0, 1.0, 1.0]
+tok_semseg@224:
+  input_alphas: [0.05, 0.2, 1.0]
+  target_alphas: [1.0, 1.0, 1.0]
+tok_normal@224:
+  input_alphas: [0.05, 0.2, 1.0]
+  target_alphas: [1.0, 1.0, 1.0]
+tok_clip@224:
+  input_alphas: [0.05, 0.2, 1.0]
+  target_alphas: [1.0, 1.0, 1.0]
+caption:
+  input_alphas: [5.0, 0.2, 1.0]
+  target_alphas: [1.0, 1.0, 1.0]
+  keep: ['all', 'random', 'random']
+det:
+  input_alphas: [0.05, 0.2, 1.0]
+  target_alphas: [1.0, 1.0, 1.0]
+  keep: ['random', 'random', 'random']
