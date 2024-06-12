@@ -19,8 +19,12 @@ def generate_sentinel_tokens(num=100, start_id=0):
     return tokens
 
 def generate_coord_tokens(bins=1000):
+    """Extra tokens that are used for bounding box coordinates, 
+    xmin, ymin, xmax, ymax, but also other modalities like color
+    maps, metadata, or poses.
+    """
     tokens = []
-    coords_str = ["xmin={}", "ymin={}", "xmax={}", "ymax={}"]
+    coords_str = ["v0={}", "v1={}", "v2={}", "v3={}"]
 
     for s in coords_str:
         for i in range(bins):

@@ -1,0 +1,105 @@
+train:
+  datasets:
+    cc12m:
+      type: multimodal
+
+      # Input and output domain names, separated by hyphen
+      in_domains: caption-t5_caption-det-metadata-rgb@224-tok_rgb@224-tok_normal@224-tok_depth@224-tok_semseg@224-tok_clip@224-human_poses-tok_dinov2@224-tok_dinov2_global-tok_imagebind@224-tok_imagebind_global-tok_sam_edge@224-tok_canny_edge@224-color_palette-sam_instance
+      out_domains: caption-det-metadata-tok_rgb@224-tok_normal@224-tok_depth@224-tok_semseg@224-tok_clip@224-human_poses-tok_dinov2@224-tok_dinov2_global-tok_imagebind@224-tok_imagebind_global-tok_sam_edge@224-tok_canny_edge@224-color_palette-sam_instance
+
+      # Dirichlet alphas concentration parameter for input and output. 
+      # Can be either one value, or one value per input modality separated by hyphen.
+      input_alphas: null
+      target_alphas: null
+      # Path to specific alphas configuration to enable mixture of Dirichlets. 
+      # If provided, overrides input_alphas and target_alphas
+      alphas_config: "cfgs/default/4m/alphas_mixture/main/mix_mod21_all2allmix_rgb2all_capT5bias.yaml"
+
+      # Optionally, min_input_tokens, min_target_tokens, num_input_tokens, num_target_tokens can be specified here
+      # If so, they will override the values provided in the main config
+      min_input_tokens: null
+      min_target_tokens: null
+      num_input_tokens: 256
+      num_target_tokens: 256
+
+      # Data can either be local or on cloud storage (e.g. S3), see data docs for more info
+      # Use braceexpand notation to indicate shard range (e.g. shard-{0000..9999}.tar)
+      # Use brackets to indicate multiple modalities (e.g. [modality1,modality2,modality3]) 
+      data_path: 'path/to/training/data/[modality1,modality2,modality3]/shard-{00000..9999}.tar' 
+      use_wds: True # Use webdataset
+      wds_n_repeats: 4 # Number of repeats for webdataset loader to improve efficiency
+      wds_shuffle_buffer_tar: 1_000 # Webdatasets shuffle buffer after loading tar files
+      wds_shuffle_buffer_repeat: 1_000 # Webdatasets shuffle buffer after repeating samples
+      
+      main_augment_domain: rgb@224 # Select from which modality to get the original full image size (mostly important for resizing bounding boxes)
+      aligned_captions: True # Align captions to crop_settings
+      tok_train_aug: True # Apply data augmentation to tokens (if multiple crop settings are available)
+
+      # modality_name_map: # Use modality_name_map to define a mapping from a folder name to a modality name
+      #   tok_rgb_folder_name: tok_rgb@224
+      #   tok_depth_folder_nme: tok_depth@224
+      #   ...
+    
+    coyo700m:
+      type: multimodal
+
+      # Input and output domain names, separated by hyphen
+      in_domains: caption-det-rgb@224-tok_rgb@224-tok_normal@224-tok_depth@224-tok_semseg@224-tok_clip@224
+      out_domains: caption-det-tok_rgb@224-tok_normal@224-tok_depth@224-tok_semseg@224-tok_clip@224
+
+      # Dirichlet alphas concentration parameter for input and output. 
+      # Can be either one value, or one value per input modality separated by hyphen.
+      input_alphas: null
+      target_alphas: null
+      # Path to specific alphas configuration to enable mixture of Dirichlets. 
+      # If provided, overrides input_alphas and target_alphas
+      alphas_config: "cfgs/bolt/pretrain/4m/alphas_mixture/all2allmix-oldmod_rgb2all_capbias_v0.yaml" # TODO
+
+      # Optionally, min_input_tokens, min_target_tokens, num_input_tokens, num_target_tokens can be specified here
+      # If so, they will override the values provided in the main config
+      min_input_tokens: null
+      min_target_tokens: null
+      num_input_tokens: 256
+      num_target_tokens: 256
+
+      # Data can either be local or on cloud storage (e.g. S3), see data docs for more info
+      # Use braceexpand notation to indicate shard range (e.g. shard-{0000..9999}.tar)
+      # Use brackets to indicate multiple modalities (e.g. [modality1,modality2,modality3]) 
+      data_path: 'path/to/training/data/[modality1,modality2,modality3]/shard-{00000..9999}.tar' 
+      use_wds: True # Use webdataset
+      wds_n_repeats: 1 # Number of repeats for webdataset loader to improve efficiency
+      wds_shuffle_buffer_tar: 1_000 # Webdatasets shuffle buffer after loading tar files
+      wds_shuffle_buffer_repeat: 1_000 # Webdatasets shuffle buffer after repeating samples
+      
+      main_augment_domain: rgb@224 # Select from which modality to get the original full image size (mostly important for resizing bounding boxes)
+      aligned_captions: True # Align captions to crop_settings
+      tok_train_aug: True # Apply data augmentation to tokens (if multiple crop settings are available)
+
+      # modality_name_map: # Use modality_name_map to define a mapping from a folder name to a modality name
+      #   tok_rgb_folder_name: tok_rgb@224
+      #   tok_depth_folder_nme: tok_depth@224
+      #   ...
+
+    c4:
+      type: huggingface
+      
+      in_domains: caption
+      out_domains: caption
+
+      input_alphas: "1.0"
+      target_alphas: "1.0"
+      alphas_config: null
+
+      data_path: '/path/to/c4/en'
+      shuffle_buffer_load: 1_000
+
+  weights: [0.6, 0.2, 0.2] # Sampling weights for the training datasets
+  
+val:
+  datasets:
+    cc12m: 
+      data_path: 'path/to/val/data'
+    coyo700m: 
+      data_path: 'path/to/val/data'
+    c4:
+      data_path: 'path/to/val/data'

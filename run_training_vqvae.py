@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Union
 import yaml
 from PIL import Image
+from copy import deepcopy
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -49,15 +50,17 @@ from torchmetrics.image import (MultiScaleStructuralSimilarityIndexMeasure,
 from torchmetrics.image.fid import FrechetInceptionDistance
 from torchmetrics.image.inception import InceptionScore
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
+from torchmetrics.classification import BinaryJaccardIndex
 from wandb import AlertLevel
 from webdataset.handlers import reraise_exception
 
 import fourm.utils as utils
 import fourm.utils.clip as clip
 import fourm.utils.data_constants as data_constants
-from fourm.data import (CenterCropImageAugmenter, RandomCropImageAugmenter,
+from fourm.data import (CenterCropImageAugmenter, RandomCropImageAugmenter, NoImageAugmenter,
                   build_wds_divae_dataloader)
-from fourm.data.modality_transforms import UnifiedDataTransform, RGBTransform, NormalTransform
+from fourm.data.modality_transforms import (UnifiedDataTransform, RGBTransform,
+                                            NormalTransform, SAMInstanceTransform)
 from fourm.data.multimodal_dataset_folder import MultiModalDatasetFolder
 from fourm.data.modality_info import MODALITY_INFO, MODALITY_TRANSFORMS_DIVAE
 from fourm.utils import ModelEmaV2 as ModelEma
@@ -67,6 +70,13 @@ from fourm.utils.optim_factory import create_optimizer
 from fourm.utils.plotting_utils import pca_visualize
 from fourm.vq.vq_utils import compute_codebook_usage
 from fourm.vq.vqvae import VQVAE
+
+try:
+    from fourm.utils.imagebind.models import imagebind_model
+    from fourm.utils.imagebind.models.imagebind_model import ModalityType
+except Exception as e:
+    print(e)
+    print("ImageBind utils are not found, if you'd like to train an ImageBind tokenizer, please install them following the official instructions at https://github.com/facebookresearch/ImageBind . Otherwise, you can ignore this warning.")
 
 # Add the valid modalities that are extracted from RGB at train time to this list
 FEAT_MODALITIES = ['CLIP-B16', 'CLIP-L14', 'DINOv2-B14', 'DINOv2-B14-global', 'DINOv2-G14', 'DINOv2-G14-global', 'ImageBind-H14', 'ImageBind-H14-global']
@@ -105,6 +115,8 @@ def get_args() -> argparse.Namespace:
                         help='Only used when encoder pos emb are initialized at a certain resolution. (default: %(default)s)')
     parser.add_argument('--input_size_dec', default=None, type=int,
                         help='Only used when decoder pos emb are initialized at a certain resolution. (default: %(default)s)')
+    parser.add_argument('--mask_size', default=64, type=int,
+                        help='Mask size when tokenizing SAM instannces in the binary mask representation. (default: %(default)s)')
     parser.add_argument('--encoder_type', default='vit_s_enc', type=str, metavar='ENC',
                         help='Name of encoder (default: %(default)s)')
     parser.add_argument('--decoder_type', default='vit_b_dec', type=str, metavar='DEC',
@@ -119,6 +131,10 @@ def get_args() -> argparse.Namespace:
     parser.add_argument('--freeze_enc', action='store_true')
     parser.add_argument('--no_freeze_enc', action='store_false', dest='freeze_enc')
     parser.set_defaults(freeze_enc=False)
+    parser.add_argument('--out_conv', action='store_true',
+                        help='If True, adds two ConvNeXt blocks after transformer to deal with patch checkerboard artifacts (default: %(default)s)')
+    parser.add_argument('--no_out_conv', action='store_false', dest='out_conv')
+    parser.set_defaults(out_conv=False)
     parser.add_argument('--loss_fn', default='mse', type=str,
                         help='Reconstruction loss function (default: %(default)s)')
     parser.add_argument('--percept_loss_type', default=None, type=str,
@@ -219,8 +235,10 @@ def get_args() -> argparse.Namespace:
                         help='Domain/Task name to load (default: %(default)s)')
     parser.add_argument('--mask_value', default=None, type=float,
                         help='Optionally set masked-out regions to this value after data augs (default: %(default)s)') 
-    parser.add_argument('--data_path', default=data_constants.IMAGENET_TRAIN_PATH, type=str, help='dataset path')
+    parser.add_argument('--data_path', default=None, type=str, help='dataset path')
     parser.add_argument('--eval_data_path', default=None, type=str, help='dataset path')
+    parser.add_argument('--imagenet_default_mean_and_std', default=False, action='store_true')
+    parser.add_argument('--standardize_surface_normals', default=False, action='store_true')
     parser.add_argument('--min_crop_scale', default=0.8, type=float,
                         help='Minimum crop scale for random data augmentation (default: %(default)s)')
     parser.add_argument('--cache_datasets', default=False, action='store_true',
@@ -333,7 +351,13 @@ def get_model(args: argparse.Namespace, device: Union[torch.device, str]) -> VQV
     
     # Compute the dead codebook threshold
     total_batch_size = args.batch_size * utils.get_world_size()
-    mean_img_size = (args.input_size_min + args.input_size_max) // 2
+    if 'sam_mask' in args.domain:
+        input_size_min = input_size_max = args.mask_size
+    else:
+        input_size_min = args.input_size_min
+        input_size_max = args.input_size_max
+
+    mean_img_size = (input_size_min + input_size_max) // 2
     tokens_per_image = (mean_img_size // args.patch_size) ** 2
     codebook_size_int = np.prod([int(d) for d in args.codebook_size.split('-')]) if isinstance(args.codebook_size, str) else args.codebook_size
     uniform_token_count_per_batch = total_batch_size * tokens_per_image / codebook_size_int
@@ -354,7 +378,7 @@ def get_model(args: argparse.Namespace, device: Union[torch.device, str]) -> VQV
         n_channels += 1
 
     model = VQVAE(
-        image_size=args.input_size_max,
+        image_size=input_size_max,
         image_size_enc=args.input_size_enc,
         image_size_dec=args.input_size_dec,
         n_channels=n_channels,
@@ -380,6 +404,7 @@ def get_model(args: argparse.Namespace, device: Union[torch.device, str]) -> VQV
         ckpt_path=ckpt,
         ignore_keys=ignore_keys,
         freeze_enc=args.freeze_enc,
+        out_conv=args.out_conv,
     )
 
     return model.to(device)
@@ -417,9 +442,7 @@ def get_feature_extractor(args: argparse.Namespace, device: Union[torch.device, 
         teacher_model = teacher_model.visual
         return teacher_model.eval().to(device)
     elif args.domain == 'DINOv2-B14' or args.domain == 'DINOv2-B14-global':
-        #teacher_model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitb14')
-        teacher_model = torch.hub.load('dinov2', 'dinov2_vitb14', source='local', pretrained=False)
-        teacher_model.load_state_dict(torch.load('dinov2_vitb14.pth'))
+        teacher_model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitb14')
         return teacher_model.eval().to(device)
     elif args.domain == 'DINOv2-G14' or args.domain == 'DINOv2-G14-global':
         teacher_model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitg14')
@@ -476,17 +499,30 @@ def main(args: argparse.Namespace) -> None:
     sampler_rank = global_rank
 
     # Define which modalities should be loaded from disk. If a modality is extracted from RGB, load RGB instead.
-    args.all_domains = ['rgb'] if args.domain in FEAT_MODALITIES else [args.domain]
+    if args.domain in FEAT_MODALITIES:
+        args.all_domains = ['rgb']
+    elif 'sam_mask' in args.domain:
+        args.all_domains = ['rgb', args.domain]
+    else:
+        args.all_domains = [args.domain]
     args.all_domains += [] if args.mask_value is None else ['mask_valid']
     
     modality_info = setup_modality_info(args)
     modality_paths = {mod: modality_info[mod]['path'] for mod in modality_info if modality_info[mod].get('path', None) is not None}
 
     args.input_size = args.input_size_max # For multi-resolution training, load the largest resolution and downsample accordingly
-    image_augmenter_train = RandomCropImageAugmenter(target_size=args.input_size, main_domain=args.all_domains[0], crop_scale=(args.min_crop_scale, 1.0))
+    if 'human_poses' not in args.domain:
+        image_augmenter_train = RandomCropImageAugmenter(target_size=args.input_size, main_domain=args.all_domains[0], crop_scale=(args.min_crop_scale, 1.0))
+    else:
+        image_augmenter_train = NoImageAugmenter()
 
     MODALITY_TRANSFORMS_DIVAE['normal'] = NormalTransform(standardize_surface_normals=args.standardize_surface_normals)
     MODALITY_TRANSFORMS_DIVAE['rgb'] = RGBTransform(imagenet_default_mean_and_std=args.imagenet_default_mean_and_std)
+    
+    MODALITY_TRANSFORMS_DIVAE_VAL = deepcopy(MODALITY_TRANSFORMS_DIVAE)
+    if 'sam_mask' in args.domain:
+        MODALITY_TRANSFORMS_DIVAE[args.domain] = SAMInstanceTransform(mask_size=args.mask_size, max_instance_n=1)
+        MODALITY_TRANSFORMS_DIVAE_VAL[args.domain] = SAMInstanceTransform(mask_size=args.mask_size, max_instance_n=200)
 
     if args.use_wds:
         if args.data_path.startswith("s3"):
@@ -557,11 +593,14 @@ def main(args: argparse.Namespace) -> None:
         )
 
     if args.eval_data_path:
-        image_augmenter_val = CenterCropImageAugmenter(target_size=args.input_size, main_domain=args.all_domains[0])
-        transforms_val = UnifiedDataTransform(transforms_dict=MODALITY_TRANSFORMS_DIVAE, image_augmenter=image_augmenter_val)
+        if 'human_poses' not in args.domain:
+            image_augmenter_val = CenterCropImageAugmenter(target_size=args.input_size, main_domain=args.all_domains[0])
+        else:
+            image_augmenter_val = NoImageAugmenter()
+        transforms_val = UnifiedDataTransform(transforms_dict=MODALITY_TRANSFORMS_DIVAE_VAL, image_augmenter=image_augmenter_val)
 
         dataset_val = MultiModalDatasetFolder(root=args.eval_data_path, modalities=args.all_domains, modality_paths=modality_paths, 
-                                              modality_transforms=MODALITY_TRANSFORMS_DIVAE, transform=transforms_val, cache=args.cache_datasets)
+                                              modality_transforms=MODALITY_TRANSFORMS_DIVAE_VAL, transform=transforms_val, cache=args.cache_datasets)
         if args.dist_eval:
             if len(dataset_val) % num_tasks != 0:
                 print('Warning: Enabling distributed evaluation with an eval dataset not divisible by process number. '
@@ -583,7 +622,7 @@ def main(args: argparse.Namespace) -> None:
         # Computing image metrics can be expensive (because of the many diffusion forward passes), so we can choose to only do it on a subset of the data
         if args.num_eval_metrics_samples is not None:
             dataset_metrics = MultiModalDatasetFolder(root=args.eval_data_path, modalities=args.all_domains, modality_paths=modality_paths, 
-                                                    modality_transforms=MODALITY_TRANSFORMS_DIVAE, transform=transforms_val, 
+                                                    modality_transforms=MODALITY_TRANSFORMS_DIVAE_VAL, transform=transforms_val, 
                                                     pre_shuffle=True, max_samples=args.num_eval_metrics_samples, cache=args.cache_datasets)
             if args.dist_eval:
                 if len(dataset_metrics) % num_tasks != 0:
@@ -607,7 +646,7 @@ def main(args: argparse.Namespace) -> None:
 
         if args.num_logged_images is not None:
             dataset_image_log = MultiModalDatasetFolder(root=args.eval_data_path, modalities=args.all_domains, modality_paths=modality_paths, 
-                                                    modality_transforms=MODALITY_TRANSFORMS_DIVAE, transform=transforms_val, 
+                                                    modality_transforms=MODALITY_TRANSFORMS_DIVAE_VAL, transform=transforms_val, 
                                                     pre_shuffle=True, max_samples=args.num_logged_images, cache=args.cache_datasets)
             # No dist eval, we only run it on the main process
             sampler_image_log = torch.utils.data.SequentialSampler(dataset_image_log)
@@ -858,12 +897,18 @@ def prepare_inputs(x: Dict[str, torch.Tensor],
     """
     # If features need to be extracted on the fly, load RGB
     if domain in FEAT_MODALITIES:
-        images = x['rgb'].to(device, non_blocking=True)
+        images = x['rgb'].to(device, non_blocking=True) 
+    elif 'sam_mask' in domain:
+        images = x[domain]['instance']
+        valid = x[domain]['valid']
+        images = images.flatten(end_dim=1).unsqueeze(1)
+        valid = valid.flatten()
+        images = images[valid].to(device, non_blocking=True)
     else:
         images = x[domain].to(device, non_blocking=True)
 
     # Resize the images if needed
-    if image_size is not None:
+    if image_size is not None and domain not in ['human_poses', 'sam_mask']:
         if 'semseg' in domain:
             images = F.interpolate(images.unsqueeze(1).float(), image_size, mode='nearest').to(images.dtype).squeeze(1)
         else:
@@ -905,6 +950,8 @@ def prepare_inputs(x: Dict[str, torch.Tensor],
                 images = images[:,1:,:]
                 images = rearrange(images, 'b (nh nw) d -> b d nh nw', nh=N_H, nw=N_W)
 
+    if 'human_poses' in domain:
+        images = images.unsqueeze(2).unsqueeze(2)
     # Optionally mask out invalid regions and concat mask and images
     images = mask_out_samples(images, x.get('mask_valid', None), mask_value=mask_value)
 
@@ -921,7 +968,7 @@ def compute_reconst_loss(
         model_output: Model predictions.
         images: Target.
         loss_fn: Loss function to use. Can be 'mse', 'l1', 'smooth_l1', 
-          'cross_entropy', 'cosine', or 'cosine_1d'.
+          'cross_entropy', 'cosine', 'cosine_1d', or 'binary_cross_entropy'.
 
     Returns:
         Reconstruction loss.
@@ -946,6 +993,11 @@ def compute_reconst_loss(
             rearrange(images, 'b c h w -> b c (h w)'), 
             dim=1
         ).mean()
+    elif loss_fn == 'binary_cross_entropy':
+        model_output = torch.sigmoid(model_output)
+        model_output = torch.cat([model_output, 1-model_output], dim=1)
+        images = torch.cat([images, 1-images], dim=1)
+        reconst_loss = F.cross_entropy(model_output, images)
     else:
         raise ValueError(f'Unknown loss function {loss_fn}')
     return reconst_loss
@@ -1080,6 +1132,8 @@ def train_one_epoch(model: Union[nn.Module, DDP],
 
         # Load inputs, move to device, optionally extract features, resize, and optionally add mask
         images = prepare_inputs(x, domain, feature_extractor, device, image_size=image_size, mask_value=mask_value)
+        # In case the sample doesn't have any instances ignore this iteration
+        if 'sam_mask' in domain and images.shape[0] == 0: continue
 
         with torch.cuda.amp.autocast(dtype=dtype, enabled=dtype != torch.float32):
             model_output, code_loss = model(images)
@@ -1335,6 +1389,8 @@ def evaluate(model: Union[nn.Module, DDP],
 
         # Load inputs, move to device, optionally extract features, resize, and optionally add mask
         images = prepare_inputs(x, domain, feature_extractor, device, image_size=image_size, mask_value=mask_value)
+        # In case the sample doesn't have any instances ignore this iteration
+        if 'sam_mask' in domain and images.shape[0] == 0: continue
 
         with torch.cuda.amp.autocast(dtype=dtype, enabled=dtype != torch.float32):
             model_output, code_loss = model(images)
@@ -1411,11 +1467,17 @@ def eval_metrics(model: Union[nn.Module, DDP],
         data_range=1., reduction='elementwise_mean', sync_on_compute=True, compute_on_cpu=compute_on_cpu,
     ).to(device)
     if domain not in DENSE_FEAT_MODALITIES:
-        ms_ssim_metric = MultiScaleStructuralSimilarityIndexMeasure(
-            data_range=1., reduction='elementwise_mean', normalize=False, sync_on_compute=True, compute_on_cpu=compute_on_cpu,
-        ).to(device)
+        if 'sam_mask' in domain:
+            iou_metric = BinaryJaccardIndex().to(device)
+            ms_ssim_metric = None
+        else:
+            ms_ssim_metric = MultiScaleStructuralSimilarityIndexMeasure(
+                data_range=1., reduction='elementwise_mean', normalize=False, sync_on_compute=True, compute_on_cpu=compute_on_cpu,
+            ).to(device)
+            iou_metric = None
     else:
         ms_ssim_metric = None
+        iou_metric = None
     if domain in ['rgb', 'normal']:
         # All of these metrics expect images in [0, 1]
         fid_metric = FrechetInceptionDistance(
@@ -1437,6 +1499,8 @@ def eval_metrics(model: Union[nn.Module, DDP],
 
         # Load inputs, move to device, optionally extract features, resize, and optionally add mask
         images = prepare_inputs(x, domain, feature_extractor, device, image_size=eval_size, mask_value=mask_value)
+        # In case the sample doesn't have any instances ignore this iteration
+        if 'sam_mask' in domain and images.shape[0] == 0: continue
 
         # Autoencode the images
         with torch.no_grad(), torch.cuda.amp.autocast(dtype=dtype, enabled=dtype != torch.float32):
@@ -1460,6 +1524,10 @@ def eval_metrics(model: Union[nn.Module, DDP],
             # 1-channel domains in [-1,1]
             gt = denormalize(images[:,:1], mean=(0.5,), std=(0.5,))
             reconst = denormalize(output[:,:1], mean=(0.5,), std=(0.5,))
+        elif 'sam_mask' in domain:
+            # 1-channel domains in [-∞, ∞]
+            gt = images[:,:1]
+            reconst = torch.sigmoid(output)[:,:1]
         elif domain in ['principal_curvature']:
             # 2-channel domains in [-1,1]
             gt = denormalize(images[:,:2], mean=(0.5,0.5), std=(0.5,0.5))
@@ -1481,6 +1549,8 @@ def eval_metrics(model: Union[nn.Module, DDP],
             lpips_metric.update(reconst.clamp(0, 1), gt)
         if inception_metric is not None:
             inception_metric.update(reconst.clamp(0, 1))
+        if iou_metric is not None:
+            iou_metric.update(reconst.clamp(0, 1), gt)
             
 
     # Compute and log metrics
@@ -1501,6 +1571,8 @@ def eval_metrics(model: Union[nn.Module, DDP],
         inception_mean, inception_std = inception_metric.compute()
         results[prefix + 'InceptionMean' + suffix] = inception_mean.item()
         results[prefix + 'InceptionStd' + suffix] = inception_std.item()
+    if iou_metric is not None:
+        results[prefix + 'IoU' + suffix] = iou_metric.compute().item()
 
     # Reset metrics
     mse_metric.reset()
@@ -1514,6 +1586,8 @@ def eval_metrics(model: Union[nn.Module, DDP],
         lpips_metric.reset()
     if inception_metric is not None:
         inception_metric.reset()
+    if iou_metric is not None:
+        iou_metric.reset()
 
     # Sync the tokens across processes to compute codebook usage
     if log_codebook_usage:
@@ -1618,6 +1692,8 @@ def eval_image_log(model: Union[nn.Module, DDP],
         for x in data_loader:
             # Load inputs, move to device, optionally extract features, resize, and optionally add mask
             images = prepare_inputs(x, domain, feature_extractor, device, image_size=eval_size, mask_value=mask_value)
+            # In case the sample doesn't have any instances ignore this iteration
+            if 'sam_mask' in domain and images.shape[0] == 0: continue
 
             # Autoencode the images
             with torch.no_grad(), torch.cuda.amp.autocast(dtype=dtype, enabled=dtype != torch.float32):
@@ -1670,6 +1746,9 @@ def eval_image_log(model: Union[nn.Module, DDP],
                 reconst = np.stack([pca_visualize(feat) for feat in output]) # [B, N_H, N_W, 3]
                 gt = F.interpolate(torch.tensor(gt).permute(0,3,1,2), eval_size, mode='nearest')
                 reconst = F.interpolate(torch.tensor(reconst).permute(0,3,1,2), eval_size, mode='nearest')
+            elif 'sam_mask' in domain:
+                gt = images[:,:1]
+                reconst = torch.sigmoid(output)[:,:1]
             else:
                 raise NotImplementedError('Domain {domain} not supported for plotting.')
 

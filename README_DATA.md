@@ -71,11 +71,15 @@ Starting from text-image pairs, we use pseudo labeling to create an aligned mult
 | Modality              | Model                                | Homepage                                                                                             |
 |-----------------------|--------------------------------------|------------------------------------------------------------------------------------------------------|
 | Depth                 | Omnidata DPT-B-Hybrid (v2)           | [link](https://docs.omnidata.vision/pretrained.html#Pretrained-Models)                               |
-| Surface Normals       | Omnidata DPT-B-Hybrid (v2)           | [link](https://docs.omnidata.vision/pretrained.html#Pretrained-Models)                               |
+| Surface normals       | Omnidata DPT-B-Hybrid (v2)           | [link](https://docs.omnidata.vision/pretrained.html#Pretrained-Models)                               |
 | Semantic segmentation | Mask2Former Swin-B                   | [link](https://github.com/facebookresearch/Mask2Former/blob/main/MODEL_ZOO.md#panoptic-segmentation) |
 | Bounding boxes        | ViTDet ViT-H with Cascade Mask-RCNN  | [link](https://github.com/facebookresearch/detectron2/tree/main/projects/ViTDet#cascade-mask-r-cnn)  |
 | CLIP features         | CLIP ViT-B/16                        | [link](https://github.com/OpenAI/CLIP#clip)                                                          |
-
+| DINOv2 features       | DINOv2 ViT-B/14                      | [link](https://github.com/facebookresearch/dinov2?tab=readme-ov-file#pretrained-models)              |
+| ImageBind features    | ImageBind ViT-H/14                   | [link](https://github.com/facebookresearch/ImageBind?tab=readme-ov-file#imagebind-model)             |
+| SAM instances         | SAM ViT-H                            | [link](https://github.com/facebookresearch/segment-anything?tab=readme-ov-file#model-checkpoints)    |
+| 3D human poses & shape| HMR2.0                               | [link](https://github.com/shubham-goel/4D-Humans)                                                    |
+| Color palette         | PyPalette                            | [link](https://github.com/adamgrieger/pypalette)                                                     |
 
 ## Pre-tokenization
 

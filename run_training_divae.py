@@ -245,7 +245,7 @@ def get_args() -> argparse.Namespace:
                         help='Domain/Task name to load (default: %(default)s)')
     parser.add_argument('--mask_value', default=None, type=float,
                         help='Optionally set masked-out regions to this value after data augs (default: %(default)s)') 
-    parser.add_argument('--data_path', default=data_constants.IMAGENET_TRAIN_PATH, type=str, help='dataset path')
+    parser.add_argument('--data_path', default=None, type=str, help='dataset path')
     parser.add_argument('--eval_data_path', default=None, type=str, help='dataset path')
     parser.add_argument('--imagenet_default_mean_and_std', default=False, action='store_true')
     parser.add_argument('--standardize_surface_normals', default=False, action='store_true')
@@ -599,6 +599,12 @@ def main(args: argparse.Namespace) -> None:
 
     else:
         data_loader_val, data_loader_metrics, dataset_image_log = None, None, None
+
+    if global_rank == 0 and args.log_wandb:
+        log_writer = utils.WandbLogger(args)
+        log_writer.set_step(0)
+    else:
+        log_writer = None
 
     if global_rank == 0 and args.log_wandb:
         # Edit run name and add tags

@@ -160,10 +160,24 @@ def get_args(args=None):
                         help='Depth tokenizer ID (default: %(default)s)')
     parser.add_argument('--normal_tok_id', default=None, type=str,
                         help='Normal tokenizer ID (default: %(default)s)')
+    parser.add_argument('--edges_tok_id', default=None, type=str,
+                        help='Edges tokenizer ID (default: %(default)s)')
     parser.add_argument('--semseg_tok_id', default=None, type=str,
                         help='Semseg tokenizer ID (default: %(default)s)')
     parser.add_argument('--clip_tok_id', default=None, type=str,
                         help='CLIP tokenizer ID (default: %(default)s)')
+    parser.add_argument('--dinov2_tok_id', default=None, type=str,
+                        help='DINOv2 tokenizer ID (default: %(default)s)')
+    parser.add_argument('--imagebind_tok_id', default=None, type=str,
+                        help='ImageBind tokenizer ID (default: %(default)s)')
+    parser.add_argument('--dinov2_glob_tok_id', default=None, type=str,
+                        help='DINOv2 global tokenizer ID (default: %(default)s)')
+    parser.add_argument('--imagebind_glob_tok_id', default=None, type=str,
+                        help='ImageBind global tokenizer ID (default: %(default)s)')
+    parser.add_argument('--sam_instance_tok_id', default=None, type=str,
+                        help='SAM instance tokenizer ID (default: %(default)s)')
+    parser.add_argument('--human_poses_tok_id', default=None, type=str,
+                        help='Human poses tokenizer ID (default: %(default)s)')
     parser.add_argument('--text_tok_path', default='fourm/utils/tokenizer/trained/text_tokenizer_4m_wordpiece_30k.json', type=str,
                         help='Text tokenizer path (default: %(default)s)')
     
@@ -330,8 +344,8 @@ def load_model(model_id, model_class, device):
         model = model_class(config=config)
         model.load_state_dict(ckpt)
     else:
-        model = model_class.from_pretrained(model_id).eval().to(device)
-    return model
+        model = model_class.from_pretrained(model_id)
+    return model.eval().to(device)
 
 def load_tokenizers(args, device):
     toks = {}
@@ -352,6 +366,11 @@ def load_tokenizers(args, device):
     if args.normal_tok_id:
         toks['tok_normal'] = load_model(args.normal_tok_id, DiVAE, device)
 
+    # Edges tokenizer
+    if args.edges_tok_id:
+        toks['tok_canny_edge'] = load_model(args.edges_tok_id, DiVAE, device)
+        toks['tok_sam_edge'] = toks['tok_canny_edge']
+
     # Semseg tokenizer
     if args.semseg_tok_id:
         toks['tok_semseg'] = load_model(args.semseg_tok_id, VQVAE, device)
@@ -359,6 +378,30 @@ def load_tokenizers(args, device):
     # CLIP tokenizer
     if args.clip_tok_id:
         toks['tok_clip'] = load_model(args.clip_tok_id, VQVAE, device)
+
+    # DINOv2 tokenizer
+    if args.dinov2_tok_id:
+        toks['tok_dinov2'] = load_model(args.dinov2_tok_id, VQVAE, device)
+
+    # ImageBind tokenizer
+    if args.imagebind_tok_id:
+        toks['tok_imagebind'] = load_model(args.imagebind_tok_id, VQVAE, device)
+
+    # DINOv2 global tokenizer
+    if args.dinov2_glob_tok_id:
+        toks['tok_dinov2_global'] = load_model(args.dinov2_glob_tok_id, VQVAE, device)
+
+    # ImageBind global tokenizer
+    if args.imagebind_glob_tok_id:
+        toks['tok_imagebind_global'] = load_model(args.imagebind_glob_tok_id, VQVAE, device)
+
+    # SAM instances
+    if args.sam_instance_tok_id:
+        toks['sam_instance'] = load_model(args.sam_instance_tok_id, VQVAE, device)
+
+    # Human poses
+    if args.human_poses_tok_id:
+        toks['tok_pose'] = load_model(args.human_poses_tok_id, VQVAE, device)
 
     return toks
 

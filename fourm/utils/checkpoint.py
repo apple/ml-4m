@@ -17,6 +17,7 @@
 # --------------------------------------------------------
 import io
 import os
+import ast
 import json
 from pathlib import Path
 from safetensors.torch import load as load_st
@@ -159,7 +160,7 @@ def parse_metadata(metadata_str):
     metadata = {}
     for k, v in metadata_str.items():
         try:
-            v_parsed = eval(v)
+            v_parsed = ast.literal_eval(v)
         except:
             v_parsed = v
         metadata[k] = v_parsed

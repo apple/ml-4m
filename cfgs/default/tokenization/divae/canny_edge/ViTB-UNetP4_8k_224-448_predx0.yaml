@@ -1,0 +1,79 @@
+run_name: auto
+
+# Architecture
+encoder_type: vit_b_enc
+decoder_type: unet_patched
+input_size_min: 224
+input_size_max: 448
+resolution_step: 32
+patch_size: 16 # encoder ViT patch size
+patch_size_dec: 4 # Patched UNet decoder patch size
+post_mlp: True # tanh MLP before quantizer, see ViT-VQGAN paper
+
+# Start from base-resolution checkpoint
+full_ckpt: '/path/to/pretrained_weights' # Change me
+
+# Quantizer
+codebook_size: 8192
+latent_dim: 32
+norm_codes: True
+codebook_weight: 1.0
+quantizer_type: lucid
+coef_ema_dead_code: 32.0
+code_replacement_policy: batch_random
+commitment_weight: 1.0
+quantizer_ema_decay: 0.99
+kmeans_init: False
+
+# Diffusion
+num_train_timesteps: 1000 # number of diffusion steps during training
+prediction_type: sample # diffusion target
+beta_schedule: linear # noise schedule
+cls_free_guidance_dropout: 0.0 # How often to drop out the conditioning
+masked_cfg: False # Randomly mask out the tokens when using conditioning dropout
+clip_sample: False # Only for logged images
+loss_fn: smooth_l1
+
+# Train
+dtype: fp16 # fp32, fp16 or bf16
+epochs: 1
+opt: adamw
+opt_betas: [0.9, 0.99]
+blr: 0.00005 # base_lr = 1e-4, lr = base_lr * batch_size / 256
+warmup_lr: 0.000001 # 1e-6
+min_lr: 0.
+warmup_epochs: -1
+batch_size: 64 # per GPU
+hflip: 0.5
+clip_grad: 1.0
+model_ema: True
+model_ema_decay: 0.9999
+model_ema_update_freq: 1
+find_unused_params: True
+save_ckpt_freq: 1
+
+# Eval
+step_eval: True
+epoch_eval: False
+eval_freq: 5000
+eval_metrics_freq: 5000
+eval_image_log_freq: 5000
+num_eval_metrics_samples: 50000 # Number of samples to use for evaluating image metrics during training.
+num_logged_images: 100
+eval_noise_schedule: DDIMScheduler
+num_eval_timesteps: 50
+input_size_eval: 256
+
+# Data
+domain: canny_edge
+imagenet_default_mean_and_std: False # Normalize to [-1,1]
+min_crop_scale: 0.8
+data_path: '/path/to/dataset' # Change me
+eval_data_path: '/path/to/eval_dataset' # Change me
+
+# Logging
+log_wandb: False # Set to True to log to Weights & Biases
+wandb_project: '4m-tokenizers'
+wandb_entity: null # Change if needed
+wandb_run_name: auto
+output_dir: 'output/auto'

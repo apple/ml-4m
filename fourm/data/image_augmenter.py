@@ -58,6 +58,22 @@ class RandomCropImageAugmenter(AbstractImageAugmenter):
 
         return crop_coords, flip, orig_size, self.target_size, rand_aug_idx
 
+class NoImageAugmenter(AbstractImageAugmenter): # this is for non-image modalities like poses where we don't do any augs, e.g. during tokenization 
+
+    def __init__(self, no_aug=True, main_domain='human_poses'):
+        self.target_size = None #to_2tuple(target_size)
+        self.no_aug = no_aug
+        self.main_domain = main_domain
+
+    def __call__(self, mod_dict, crop_settings):
+        # # With torchvision 0.13+, can also be: orig_size = TF.get_dimensions(image)
+        orig_size = (224, 224)
+
+        rand_aug_idx = 0 
+        top, left, h, w, flip = 0, 0, 224, 224, 0 
+        crop_coords = (top, left, h, w)
+
+        return crop_coords, flip, orig_size, self.target_size, rand_aug_idx
 
 class PreTokenizedImageAugmenter(AbstractImageAugmenter):
 

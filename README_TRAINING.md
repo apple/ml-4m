@@ -53,10 +53,13 @@ OMP_NUM_THREADS=1 torchrun --nproc_per_node=8 run_training_4m_fsdp.py \
 ```
 
 
-The training configurations for the 4M models in our paper are:
+The training configurations for the 4M models in our papers are:
 
 | Model | # Modalities | # Parameters | # GPUs | Config |
 |-|-|-|-|-|  
-| 4M-B | 7 | 198M | 32x A100 | [link](cfgs/default/4m/models/main/4m-b_mod7_500b.yaml) |
+| 4M-B | 7 | 198M | 64x A100 | [link](cfgs/default/4m/models/main/4m-b_mod7_500b.yaml) |
 | 4M-L | 7 | 705M | 64x A100 | [link](cfgs/default/4m/models/main/4m-l_mod7_500b.yaml) |
 | 4M-XL | 7 | 2.8B | 128x A100 | [link](cfgs/default/4m/models/main/4m-xl_mod7_500b.yaml) |
+| 4M-B | 21 | 198M | 64x A100 | [link](cfgs/default/4m/models/main/4m-b_mod21_500b.yaml) |
+| 4M-L | 21 | 705M | 64x A100 | [link](cfgs/default/4m/models/main/4m-l_mod21_500b.yaml) |
+| 4M-XL | 21 | 2.8B | 128x A100 | [link](cfgs/default/4m/models/main/4m-xl_mod21_500b.yaml) |

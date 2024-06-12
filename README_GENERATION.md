@@ -17,7 +17,7 @@ We provide information and example scripts on how to perform multimodal chained 
 
 #### Scripts and notebooks:
 - `run_generation.py`: Script that automatically performs chained X→Y→etc... generation on a given dataset.
-- `notebooks/generation.ipynb`: Jupyter notebook that gives some examples for performing generation with 4M models.
+- `notebooks/`: Jupyter notebooks that gives some examples for performing generation with 4M-7 and 4M-21 models.
 
 
 #### Configs:
@@ -75,7 +75,8 @@ Performing generation with 4M can be complex due to the large range of possibili
 - Classifier-free guidance can have a large impact on the generation fidelity, but is most important for input/output pairs that did not have clean aligned training data like images and captions. We found that increasing the guidance scale slightly when doing RGB→X inference (e.g. surface normal or segmentation prediction) can, however, also improve how well the generated modality matches the given input.
 - Multi-modal guidance can be an effective tool to balance the influence of different input modalities during the generation process.
 - The generation samplers and decoding functions support batching for faster inference.
-
+- The default generation script can only generate a limited number of SAM instances due to limits on the number of tokens the model can handle. To get a denser estimation of SAM instances use the `generate_sam_dense` method (as shown in `notebooks/generation_4M-21.ipynb`). The method performs multiple independent SAM instance predictions and aggregates them into one dense estimation.
+ - Avoid using the output of `generate_sam_dense` as the condition for generation. The output can contain large number of tokens and using it as the conditioning input can create memory issues.
 
 ## Generation script usage
 
@@ -88,6 +89,6 @@ OMP_NUM_THREADS=1 torchrun --nproc_per_node=8 run_generation.py -c cfgs/default/
 This generates and saves three variants for each prompt in the dataset. Before running this, make sure you either downloaded the 4M and tokenizer checkpoints and pointed the config entries to the right paths, or load the models via Hugging Face Hub.
 
 
-## Generation notebook
+## Generation notebooks
 
-Please see the provided Jupyter notebook in `notebooks/generation.ipynb` for more examples on how to use 4M models for inference / generation. We recommend running it on an A100 GPU, with `xformers` installed.
+Please see the provided Jupyter notebooks in `notebooks/` for more examples on how to use 4M-7 and 4M-21 models for inference/generation. We recommend running it on an A100 GPU, with `xformers` installed.

@@ -97,6 +97,7 @@ def init_empty_target_modality(mod_dict, modality_info, domain, batch_size, num_
 
     elif modality_info[domain]['type'] in ['seq', 'seq_token', 'seq_emb']:
         # Initialize mod dict
+        num_tokens = max(num_tokens, 2)
         mod_dict[domain] = {
             'tensor': torch.zeros((batch_size, num_tokens), dtype=torch.int32, device=device),
             'input_mask': torch.ones((batch_size, num_tokens), dtype=torch.bool, device=device),
@@ -114,12 +115,19 @@ def init_empty_target_modality(mod_dict, modality_info, domain, batch_size, num_
     return mod_dict
 
 def init_full_input_modality(mod_dict, modality_info, domain, device, eos_id=3):
+    if domain.startswith('rgb'):
+        batch_size, _, H, W = mod_dict[domain]['tensor'].shape
+        patch_size = modality_info[domain]['patch_size']
+        num_tokens = (H // patch_size) * (W // patch_size)
+        shape = (batch_size, num_tokens)
+    else:
+        shape = mod_dict[domain]['tensor'].shape
     if 'input_mask' not in mod_dict[domain]:
-        mod_dict[domain]['input_mask'] = torch.zeros(mod_dict[domain]['tensor'].shape, dtype=torch.bool, device=device)
+        mod_dict[domain]['input_mask'] = torch.zeros(shape, dtype=torch.bool, device=device)
     if 'target_mask' not in mod_dict[domain]:
-        mod_dict[domain]['target_mask'] = torch.ones(mod_dict[domain]['tensor'].shape, dtype=torch.bool, device=device)
+        mod_dict[domain]['target_mask'] = torch.ones(shape, dtype=torch.bool, device=device)
     if 'decoder_attention_mask' not in mod_dict[domain]:
-        mod_dict[domain]['decoder_attention_mask'] = torch.zeros(mod_dict[domain]['tensor'].shape, dtype=torch.bool, device=device)
+        mod_dict[domain]['decoder_attention_mask'] = torch.zeros(shape, dtype=torch.bool, device=device)
 
     if modality_info[domain]['type'] == 'img':
         mod_dict[domain]['input_mask'][:] = False
@@ -185,7 +193,6 @@ def expand_to_batch(mod_dict, batch_size):
                     raise ValueError(f"Invalid batch size: {B} instead of {batch_size}")
                 
     return mod_dict
-
 
 def build_chained_generation_schedules(
         cond_domains: List[str], 
@@ -1218,3 +1225,49 @@ class GenerationSampler(nn.Module):
                 raise NotImplementedError("Only image modalities are supported for now")
 
         return uncond_dict
+
+    @torch.no_grad()
+    def generate_sam_dense(self, mod_dict, schedule, text_tokenizer, batch_size=16,
+                            key='sam_instance', top_k=0.0, top_p=0.0, seed=None, verbose=False):
+        # Generation function for dense SAM instance prediction
+    
+        device = mod_dict[list(mod_dict.keys())[0]]['tensor'].device
+        mod_dict = copy.deepcopy(mod_dict)
+        # Repeat the input batch to match the batch size
+        expanded_batch = expand_to_batch(copy.deepcopy(mod_dict), batch_size=batch_size)
+
+        # Filter the schedule to only include the key domain
+        schedule = [s for s in schedule if s['target_domain'] == key]
+        
+        out_dict = self.generate(
+            expanded_batch, schedule, text_tokenizer=text_tokenizer, 
+            verbose=verbose, seed=seed,
+            top_p=top_p, top_k=top_k,
+        )
+
+        # Merge the batch generated sequences into one sequence
+        sentinel_ids = set(get_sentinel_to_id_mapping(text_tokenizer).values())
+        merged_seq = []
+
+        for i in range(batch_size):
+
+            input_seq = out_dict[key]['tensor'][i]
+            input_seq = input_seq[out_dict[key]['input_mask'][i] == 0]
+            input_seq = input_seq.tolist()
+            
+            target_seq = out_dict[key]['tensor'][i]
+            target_seq = target_seq[out_dict[key]['target_mask'][i] == 0]
+            target_seq = target_seq.tolist()
+
+            merged_seq.extend(merge_span_masking(input_seq, target_seq, sentinel_ids=sentinel_ids))
+        
+        merged_seq = torch.tensor(merged_seq, device=device).unsqueeze(0)
+        
+        mod_dict[key] = {
+            'tensor': merged_seq,
+            'input_mask': torch.zeros(merged_seq.shape, dtype=torch.bool, device=device),
+            'target_mask': torch.ones(merged_seq.shape, dtype=torch.bool, device=device),
+            'decoder_attention_mask': torch.zeros(merged_seq.shape, dtype=torch.bool, device=device),
+        }
+
+        return mod_dict
