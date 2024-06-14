@@ -74,6 +74,11 @@ preds = sampler({'rgb@224': img.cuda()}, seed=None)
 sampler.plot_modalities(preds, save_path=None)
 ```
 
+You should expect to see an output like the following:
+
+![4M demo sampler output](./assets/4M_demo_sample_darkmode.jpg#gh-dark-mode-only)
+![4M demo sampler output](./assets/4M_demo_sample_lightmode.jpg#gh-light-mode-only)
+
 For performing caption-to-all generation, you can replace the sampler input by: `preds = sampler({'caption': 'A lake house with a boat in front [S_1]'})`.
 For a list of available 4M models, please see the model zoo below, and see [README_GENERATION.md](README_GENERATION.md) for more instructions on generation.
 
