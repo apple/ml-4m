@@ -2,6 +2,8 @@
 
 *A framework for training any-to-any multimodal foundation models. <br>Scalable. Open-sourced. Across tens of modalities and tasks.*
 
+EPFL - Apple
+
 [`Website`](https://4m.epfl.ch) | [`BibTeX`](#citation)  
 
 Official implementation and pre-trained models for :
