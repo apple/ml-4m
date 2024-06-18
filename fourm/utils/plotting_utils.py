@@ -41,6 +41,9 @@ from fourm.utils.data_constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_S
 from fourm.utils import denormalize, get_sentinel_to_id_mapping, merge_span_masking
 from fourm.utils.generation import unbatch
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+
 def tensor_to_images(tensor):
     """
     Converts a (B C H W) tensor to numpy arrays.
@@ -243,7 +246,7 @@ def decode_tok_semseg(rgb_img, mod_dict, tokenizers, key='tok_semseg', image_siz
     tokens = mod_dict[key]['tensor']
     tokens = tokens.unsqueeze(0) if tokens.ndim == 1 else tokens
     img_tok = rearrange(tokens, "b (nh nw) -> b nh nw", nh=image_size//patch_size, nw=image_size//patch_size)
-    rec = tokenizers[get_transform_key(key)].decode_tokens(img_tok.cuda()).detach().cpu()
+    rec = tokenizers[get_transform_key(key)].decode_tokens(img_tok).detach().cpu()
     if return_logits:
         return rec
     semsegs = rec.argmax(1)
@@ -622,7 +625,7 @@ def decode_sam_instances(mod_dict, tokenizers, text_tokenizer, key='sam_instance
         tokens_per_sample = np.stack(tokens_per_sample)[sorted_idx]
         bboxes_per_sample = np.stack(bboxes_per_sample)[sorted_idx]
         # Decoded tokens
-        tokens_per_sample = torch.LongTensor(tokens_per_sample).reshape(-1, 4, 4).cuda()
+        tokens_per_sample = torch.LongTensor(tokens_per_sample).reshape(-1, 4, 4).to(device)
         decoded_tokens = tokenizers[key].decode_tokens(tokens_per_sample)
         instances = torch.sigmoid(decoded_tokens).squeeze(1).cpu().detach().numpy()
 
@@ -981,7 +984,7 @@ def visualize_human_poses(pose, poses_tokenizer, mod_dict):
                 body_poses = torch.cat((body_poses,poses_curr), dim=0)
             body_poses = body_poses.long()
             
-            body_poses = body_poses.unsqueeze(0).unsqueeze(2).unsqueeze(2).cuda()
+            body_poses = body_poses.unsqueeze(0).unsqueeze(2).unsqueeze(2).to(device)
             body_poses = poses_tokenizer.decode_tokens(body_poses).squeeze(2).squeeze().reshape(1,23,3,3).cpu()
 
             all_params['pred_smpl_params']['body_pose'] = body_poses
