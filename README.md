@@ -98,7 +98,7 @@ See [README_TRAINING.md](README_TRAINING.md) for instructions on how to train 4M
 
 ### Generation
 
-See [README_GENERATION.md](README_GENERATION.md) for instructions on how to use 4M models for inference / generation. We also provide a [generation notebook](notebooks/generation.ipynb) that contains examples for 4M inference, specifically performing conditional image generation and common vision tasks (i.e. RGB-to-All).
+See [README_GENERATION.md](README_GENERATION.md) for instructions on how to use 4M models for inference / generation. We also provide a [generation notebook](notebooks/generation_4M-21.ipynb) that contains examples for 4M inference, specifically performing conditional image generation and common vision tasks (i.e. RGB-to-All).
 
 
 ## Model Zoo
