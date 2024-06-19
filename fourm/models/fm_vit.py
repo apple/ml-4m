@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
+import copy
 from functools import partial
 from typing import Optional, Union
 
@@ -19,9 +20,11 @@ import torch
 from torch import nn
 
 from fourm.utils.timm.registry import register_model
+from huggingface_hub import PyTorchModelHubMixin
 
 from .encoder_embeddings import ImageEncoderEmbedding
 from .fm_utils import Block, LayerNorm
+from fourm.data.modality_info import MODALITY_INFO
 
 
 __all__ = [
@@ -91,12 +94,12 @@ class FourMViT(nn.Module):
         output_head: Optional[nn.Module] = None,
     ):
         super().__init__()
-
+        self.img_size = img_size
         self.init_std = 0.02
         rgb_embedding = ImageEncoderEmbedding(num_channels=in_chans, patch_size=patch_size,
                                               dim_tokens=dim, sincos_pos_emb=True, image_size=img_size)
         self.num_patches = rgb_embedding.num_patches
-        self.encoder_embeddings = nn.ModuleDict({"rgb": rgb_embedding})
+        self.encoder_embeddings = nn.ModuleDict({f"rgb@{img_size}": rgb_embedding})
 
         # stochastic depth decay rule
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, encoder_depth)]
@@ -116,7 +119,8 @@ class FourMViT(nn.Module):
         # Classification head is initialized after init_weights() to allow for special init scale
         if output_head is not None:
             self.output_head = output_head
-            self.output_head.init(dim)
+            if hasattr(self.output_head, 'init'):
+                self.output_head.init(dim)
         else:
             self.output_head = nn.Identity()
 
@@ -186,7 +190,7 @@ class FourMViT(nn.Module):
             torch.Tensor: Output tensor. Shape (B, num_classes).
         """
         rgb_dict = {'tensor': x}
-        rgb_dict = self.encoder_embeddings['rgb'](rgb_dict)
+        rgb_dict = self.encoder_embeddings[f'rgb@{self.img_size}'](rgb_dict)
 
         # Add embeddings to patchified RGB image 
         x = rgb_dict['x'] + rgb_dict['emb'] # Shape: (B, N, D) with N = num_patches
@@ -222,6 +226,42 @@ class FourMViT(nn.Module):
         if unfreeze_embeddings:
             for param in self.encoder_embeddings.parameters():
                 param.requires_grad = True
+
+
+################################################
+
+# Wrapper for easy loading with Huggingface Hub
+
+class FMViT(FourMViT, PyTorchModelHubMixin):
+    """Wrapper around FourMViT for easy loading with Huggingface Hub.
+
+    Args:
+        config (dict): Dictionary containing the model and modality configuration, 
+            used for loading from Huggingface Hub.
+        output_head (nn.Module): Optional output head.
+    """
+    def __init__(self, config: dict, output_head: Optional[nn.Module] = None):
+
+        config = copy.deepcopy(config)
+
+        
+
+        config['norm_layer'] = partial(LayerNorm, eps=1e-6, bias=config['norm_bias'])
+        config['act_layer'] = getattr(torch.nn, config['act_layer'])
+
+        img_size = config['image_size']
+        config['img_size'] = img_size
+        config['patch_size'] = MODALITY_INFO[f'rgb@{img_size}'].get('patch_size', config['patch_size'])
+        config['in_chans'] = MODALITY_INFO[f'rgb@{img_size}'].get('num_channels', 3)
+
+        for key in ['image_size', 'norm_bias', 'domains_in', 'domains_out', 'decoder_depth', 'share_modality_embeddings']:
+            if key in config:
+                del config[key]
+
+        super().__init__(
+            output_head=output_head,
+            **config
+        )   
 
 
 ################################################
