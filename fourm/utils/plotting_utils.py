@@ -1116,7 +1116,56 @@ def plot_text_in_square(ax, text, padding=0.5, fontsize=14, wrap_width=50):
 
     remove_ticks_and_labels(ax)
     remove_spines(ax)
+
+
+def text_to_pil_image(text, padding=0.5, fontsize=14, wrap_width=40, image_size=(512, 512)):
+    """
+    Converts text to a PIL image.
+
+    Args:
+        text (str): Text to convert to image
+        padding (float): Padding around the text
+        fontsize (int): Font size of the text
+        wrap_width (int): Width of the text to wrap
+        image_size (tuple): Size of the output image (width, height)
+
+    Returns:
+        PIL.Image.Image: Generated image with the text
+    """
+    fig, ax = plt.subplots(figsize=(image_size[0] / 100, image_size[1] / 100), dpi=100)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
     
+    if isinstance(text, list):
+        text = text[0]
+
+    text = text.replace('[PAD]', '')
+    
+    # Wrap the text if necessary
+    wrapped_text = textwrap.fill(text, wrap_width)
+
+    # Add the padding
+    bbox_props = dict(boxstyle="square,pad=" + str(padding), facecolor="white", edgecolor="black")
+
+    # Add the text to the plot
+    ax.text(0.5, 0.5, wrapped_text, ha='center', va='center', fontsize=fontsize, bbox=bbox_props)
+
+    # Remove ticks, labels, and spines
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    # Convert the plot to a PIL image
+    fig.canvas.draw()
+    image = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+    image = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+
+    plt.close(fig)
+
+    return Image.fromarray(image)
+
+
 def plot_modality(dec_dict, key, ax, figscale=4.0):
     """
     Plots a single modality. Function name has a typo because of legacy reasons.

@@ -1,6 +1,7 @@
 from typing import Optional, List
 import os
 import math
+from PIL import Image
 import numpy as np
 import torch
 import torch.nn as nn
@@ -16,7 +17,7 @@ from fourm.utils.plotting_utils import decode_dict
 from fourm.data.modality_info import MODALITY_INFO
 from fourm.data.modality_transforms import RGBTransform
 from fourm.utils import load_safetensors
-from fourm.utils.plotting_utils import decode_dict, visualize_bboxes, plot_text_in_square
+from fourm.utils.plotting_utils import decode_dict, visualize_bboxes, plot_text_in_square, text_to_pil_image
 
 # The flag below controls whether to allow TF32 on matmul. This flag defaults to False in PyTorch 1.12 and later.
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -501,3 +502,39 @@ class Demo4MSampler(nn.Module):
             plt.close()
         else:
             plt.show()
+
+    def modalities_to_pil(self, mod_dict, use_fixed_plotting_order=False, resize=None):
+        if use_fixed_plotting_order:
+            mod_dict = {
+                k: mod_dict[k] for k in MODALITY_PLOTTING_ORDER
+                if k in mod_dict
+            }
+
+        plotted_modalities = []
+
+        for i, (mod_name, mod) in enumerate(mod_dict.items()):
+            if mod_name == 'det':
+                # Attempt to get the first available value from mod_dict according to the priority
+                keys_in_order = ['rgb@448', 'rgb@224', 'tok_rgb@448', 'tok_rgb@224']
+                rgb_background = next((mod_dict[key] for key in keys_in_order if key in mod_dict), np.ones((224, 224, 3)))
+                rgb_background = (255 * rgb_background).astype(np.uint8)
+                img_pil = Image.fromarray(visualize_bboxes(rgb_background, mod[0],).astype(np.uint8))
+            elif mod_name == 'caption':
+                img_pil = text_to_pil_image(mod[0][:512], wrap_width=40, fontsize=14)
+            elif mod_name == 'metadata':
+                metadata_pred = ',\n'.join([f'{k}: {v:.2f}' if isinstance(v, float) else f'{k}: {v}' for k, v in mod.items()])
+                img_pil = text_to_pil_image(metadata_pred, wrap_width=36, fontsize=13)
+            else:
+                img_pil = Image.fromarray((255*mod).astype(np.uint8))
+
+            if resize is not None:
+                if mod_name in ['tok_clip@224', 'tok_dinov2@224', 'tok_imagebind@224', 'tok_clip@448']:
+                    resample_mode = Image.Resampling.NEAREST
+                else:
+                    resample_mode = Image.Resampling.BILINEAR
+                img_pil = img_pil.resize((resize, resize), resample=resample_mode)
+            
+            plot_name = MODALITY_PLOTTING_NAME_MAP.get(mod_name, mod_name)
+            plotted_modalities.append((img_pil, plot_name))
+
+        return plotted_modalities
