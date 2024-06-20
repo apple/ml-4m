@@ -4,7 +4,7 @@
 
 EPFL - Apple
 
-[`Website`](https://4m.epfl.ch) | [`BibTeX`](#citation)  
+[`Website`](https://4m.epfl.ch) | [`BibTeX`](#citation)  | [`🤗 Demo`](https://huggingface.co/spaces/EPFL-VILAB/4M)
 
 Official implementation and pre-trained models for :
 
