@@ -401,11 +401,12 @@ class Demo4MSampler(nn.Module):
         
         return sample_sr, schedule_sr
 
-    def forward(self, sample, seed: Optional[int] = None, top_p: float = 0.8, top_k: float = 0.0):
+    def forward(self, sample, seed: Optional[int] = None, top_p: float = 0.8, top_k: float = 0.0, target_modalities: Optional[List[str]] = None):
         seed = seed or np.random.randint(np.iinfo(np.int64).max)
         
         # Prepare the generation parameters and sample
         cond_domains, target_domains = self.__setup_conds_and_targets(sample)
+        target_domains = target_modalities or target_domains
         sample, generation_schedule = self.__setup_sample_and_schedule(sample, cond_domains, target_domains)
 
         # Generation and decoding at the base resolution 224x224
