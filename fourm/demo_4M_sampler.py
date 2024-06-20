@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 import os
 import math
 import numpy as np
@@ -148,8 +148,8 @@ MODALITY_PLOTTING_NAME_MAP = {
     'tok_rgb@448': 'RGB (tokenized, 448x448)', 
     'tok_clip@224': 'CLIP-B/16 (224x224)', 
     'tok_clip@448': 'CLIP-B/16  (448x448)', 
-    'tok_depth@448': 'Depth (448x448)', 
     'tok_depth@224': 'Depth (224x224)', 
+    'tok_depth@448': 'Depth (448x448)', 
     'tok_normal@224': 'Normals (224x224)', 
     'tok_normal@448': 'Normals (448x448)', 
     'tok_semseg@224': 'Semantic segmentation (224x224)', 
@@ -159,6 +159,16 @@ MODALITY_PLOTTING_NAME_MAP = {
     'tok_dinov2@224': 'DINOv2-B/14 (224x224)', 
     'tok_imagebind@224': 'ImageBind-H/14 (224x224)', 
 }
+
+# Optional fixed plotting order (by default, plotting order is determined by generation order)
+MODALITY_PLOTTING_ORDER = [
+    'rgb@224', 'rgb@448', 'tok_rgb@224', 'tok_rgb@448',
+    'tok_depth@224', 'tok_depth@448', 'tok_normal@224', 'tok_normal@448', 
+    'tok_semseg@224', 'tok_semseg@448', 'tok_canny_edge@224', 'tok_sam_edge@224', 
+    'sam_instance', 'human_poses', 'det', 'caption', 'metadata', 'color_palette',
+    'tok_clip@224', 'tok_clip@448', 'tok_dinov2@224', 'tok_imagebind@224',
+]
+
 
 def get_value(defaults_dict, domain, key):
     """Look up a default value belonging to a given domain and key."""
@@ -209,6 +219,8 @@ class Demo4MSampler(nn.Module):
         tok_sam_instance: Hub or safetensors path of SAM instance tokenizer
         tok_human_poses: Hub or safetensors path of human poses tokenizer
         tok_text: Path to text tokenizer JSON file
+        mods: Optional list of modalities to override default behavior of generating everything
+        mods_sr: Optional list of super-res modalities to override default behavior of generating everything
     """
     def __init__(self, 
                  fm: str = 'EPFL-VILAB/4M-21_XL_CC12M', 
@@ -224,6 +236,8 @@ class Demo4MSampler(nn.Module):
                  tok_sam_instance: Optional[str] = 'EPFL-VILAB/4M_tokenizers_sam-instance_1k_64',
                  tok_human_poses: Optional[str] = 'EPFL-VILAB/4M_tokenizers_human-poses_1k_8',
                  tok_text: str = './fourm/utils/tokenizer/trained/text_tokenizer_4m_wordpiece_30k.json',
+                 mods: Optional[List[str]] = None,
+                 mods_sr: Optional[List[str]] = None,
                  verbose: bool = True):
         super().__init__()
 
@@ -234,13 +248,13 @@ class Demo4MSampler(nn.Module):
         # Load 4M model and initialize sampler
         fm = load_model(fm, FM)
         self.sampler_fm = GenerationSampler(fm)
-        self.mods = list(set(fm.encoder_modalities) | set(fm.decoder_modalities))
+        self.mods = mods or list(set(fm.encoder_modalities) | set(fm.decoder_modalities))
 
         # Load optional 4M super-res model and initialize sampler
         if fm_sr is not None:
             fm_sr = load_model(fm_sr, FM)
             self.sampler_fm_sr = GenerationSampler(fm_sr)
-            self.mods_sr = list(set(fm_sr.encoder_modalities) | set(fm_sr.decoder_modalities))
+            self.mods_sr = mods_sr or list(set(fm_sr.encoder_modalities) | set(fm_sr.decoder_modalities))
         else:
             self.sampler_fm_sr = None
 
@@ -430,7 +444,7 @@ class Demo4MSampler(nn.Module):
         
         return dec_dict
     
-    def plot_modalities(self, mod_dict, ncols_max=5, figscale=4.0, save_path=None):
+    def plot_modalities(self, mod_dict, ncols_max=5, figscale=4.0, save_path=None, use_fixed_plotting_order=False):
         nmods = len(mod_dict)
         ncols = min(nmods, ncols_max)
         nrows = math.ceil(nmods / ncols)
@@ -440,6 +454,12 @@ class Demo4MSampler(nn.Module):
             figsize=(ncols*figscale, nrows*figscale), 
             facecolor=(1, 1, 1)
         )
+
+        if use_fixed_plotting_order:
+            mod_dict = {
+                k: mod_dict[k] for k in MODALITY_PLOTTING_ORDER
+                if k in mod_dict
+            }
 
         for i, (mod_name, mod) in enumerate(mod_dict.items()):
             if nrows == 1:
@@ -464,9 +484,14 @@ class Demo4MSampler(nn.Module):
             
             ax_i.set_title(MODALITY_PLOTTING_NAME_MAP.get(mod_name, mod_name), fontsize=18)
 
-        for axis in ax.flatten():
+        for i, axis in enumerate(ax.flatten()):
             axis.set_xticks([])
             axis.set_yticks([])
+            if i >= len(mod_dict):
+                axis.spines['top'].set_visible(False)
+                axis.spines['right'].set_visible(False)
+                axis.spines['bottom'].set_visible(False)
+                axis.spines['left'].set_visible(False)
         
         plt.tight_layout()
         if save_path is not None:
