@@ -38,11 +38,10 @@ def enforce_zero_terminal_snr(betas: torch.Tensor) -> torch.Tensor:
     # Shift so last timestep is zero.
     alphas_bar_sqrt -= alphas_bar_sqrt_T
     # Scale so first timestep is back to old value.
-    alphas_bar_sqrt *= alphas_bar_sqrt_0 / (
-        alphas_bar_sqrt_0 - alphas_bar_sqrt_T)
+    alphas_bar_sqrt *= alphas_bar_sqrt_0 / (alphas_bar_sqrt_0 - alphas_bar_sqrt_T)
 
     # Convert alphas_bar_sqrt to betas
-    alphas_bar = alphas_bar_sqrt ** 2
+    alphas_bar = alphas_bar_sqrt**2
     alphas = alphas_bar[1:] / alphas_bar[:-1]
     alphas = torch.cat([alphas_bar[0:1], alphas])
     betas = 1 - alphas
@@ -50,10 +49,10 @@ def enforce_zero_terminal_snr(betas: torch.Tensor) -> torch.Tensor:
 
 
 def betas_for_alpha_bar(num_diffusion_timesteps: int, max_beta: float = 0.999) -> torch.Tensor:
-    """Create a beta schedule that discretizes the given alpha_t_bar function, 
+    """Create a beta schedule that discretizes the given alpha_t_bar function,
     which defines the cumulative product of (1-beta) over time from t = [0,1].
 
-    Contains a function alpha_bar that takes an argument t and transforms it to 
+    Contains a function alpha_bar that takes an argument t and transforms it to
     the cumulative product of (1-beta) up to that part of the diffusion process.
 
     Args:
@@ -80,9 +79,9 @@ def scaled_cosine_alphas(num_diffusion_timesteps: int, noise_shift: float = 1.0)
     """Shifts a cosine noise schedule by a specified amount in log-SNR space.
 
     noise_shift = 1.0 corresponds to the standard cosine noise schedule.
-    0 < noise_shift < 1.0 corresponds to a less noisy schedule (better 
+    0 < noise_shift < 1.0 corresponds to a less noisy schedule (better
     suited if the conditioning is highly informative, e.g. low-res images).
-    noise_shift > 1.0 corresponds to a more noisy schedule (better suited 
+    noise_shift > 1.0 corresponds to a more noisy schedule (better suited
     if the conditioning is not as informative, e.g. captions).
 
     See https://arxiv.org/abs/2305.18231
@@ -96,7 +95,7 @@ def scaled_cosine_alphas(num_diffusion_timesteps: int, noise_shift: float = 1.0)
     """
     t = torch.linspace(0, 1, num_diffusion_timesteps).to(torch.float64)
     log_snr = -2 * (torch.tan(torch.pi * t / 2).log() + np.log(noise_shift))
-    log_snr = log_snr.clamp(-15,15).float()
+    log_snr = log_snr.clamp(-15, 15).float()
     alphas_cumprod = log_snr.sigmoid()
     alphas_cumprod[-1] = 0.0
     return alphas_cumprod

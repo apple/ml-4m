@@ -1,4 +1,3 @@
-
 # Copyright 2024 EPFL and Apple Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,8 +18,10 @@
 import numpy as np
 import math
 
-def cosine_scheduler(base_value, final_value, epochs, niter_per_ep, warmup_epochs=0,
-                     start_warmup_value=0, warmup_steps=-1):
+
+def cosine_scheduler(
+    base_value, final_value, epochs, niter_per_ep, warmup_epochs=0, start_warmup_value=0, warmup_steps=-1
+):
     warmup_schedule = np.array([])
     warmup_iters = warmup_epochs * niter_per_ep
     if warmup_steps > 0:
@@ -31,7 +32,8 @@ def cosine_scheduler(base_value, final_value, epochs, niter_per_ep, warmup_epoch
 
     iters = np.arange(epochs * niter_per_ep - warmup_iters)
     schedule = np.array(
-        [final_value + 0.5 * (base_value - final_value) * (1 + math.cos(math.pi * i / (len(iters)))) for i in iters])
+        [final_value + 0.5 * (base_value - final_value) * (1 + math.cos(math.pi * i / (len(iters)))) for i in iters]
+    )
 
     schedule = np.concatenate((warmup_schedule, schedule))
 
@@ -40,37 +42,45 @@ def cosine_scheduler(base_value, final_value, epochs, niter_per_ep, warmup_epoch
 
 
 def constant_scheduler(base_value, epochs, niter_per_ep):
-    return base_value * np.ones(epochs*niter_per_ep)
+    return base_value * np.ones(epochs * niter_per_ep)
 
 
-def inverse_sqrt_scheduler(base_value, final_value, epochs, niter_per_ep,  warmup_epochs=0, 
-                           start_warmup_value=0, warmup_steps=-1, 
-                           cooldown_epochs=0, cooldown_steps=-1, 
-                           timescale=10_000):
-    
+def inverse_sqrt_scheduler(
+    base_value,
+    final_value,
+    epochs,
+    niter_per_ep,
+    warmup_epochs=0,
+    start_warmup_value=0,
+    warmup_steps=-1,
+    cooldown_epochs=0,
+    cooldown_steps=-1,
+    timescale=10_000,
+):
+
     warmup_iters = warmup_epochs * niter_per_ep
     if warmup_steps > 0:
         warmup_iters = warmup_steps
     print("Set warmup steps = %d" % warmup_iters)
-    
+
     cooldown_iters = cooldown_epochs * niter_per_ep
     if cooldown_steps > 0:
         cooldown_iters = cooldown_steps
     print("Set cooldown steps = %d" % cooldown_iters)
-    
+
     # Warmup schedule
     if warmup_epochs > 0 or warmup_steps > 0:
         warmup_schedule = np.linspace(start_warmup_value, base_value, warmup_iters)
     else:
         warmup_schedule = np.array([])
-    
+
     # Inverse square-root LR schedule
     iters = np.arange(epochs * niter_per_ep - warmup_iters - cooldown_iters)
     if base_value == final_value:
         schedule = base_value * np.ones(len(iters))
     else:
         schedule = base_value / np.sqrt((iters + timescale) / timescale)
-    
+
     # Cooldown schedule
     if cooldown_epochs > 0 or cooldown_steps > 0:
         cooldown_schedule = np.linspace(schedule[-1], final_value, cooldown_iters)

@@ -23,9 +23,9 @@ from torchvision.datasets.vision import VisionDataset
 
 from fourm.data.modality_transforms import AbstractTransform, get_transform_key
 
-IMG_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif', '.tiff', '.webp', '.jpx', '.npy', '.npz')
+IMG_EXTENSIONS = (".jpg", ".jpeg", ".png", ".ppm", ".bmp", ".pgm", ".tif", ".tiff", ".webp", ".jpx", ".npy", ".npz")
 
-UNIFIED_EXTENSIONS = IMG_EXTENSIONS + ('.json', '.txt', '.json.gz')
+UNIFIED_EXTENSIONS = IMG_EXTENSIONS + (".json", ".txt", ".json.gz")
 
 
 def has_file_allowed_extension(filename: str, extensions: Tuple[str, ...]) -> bool:
@@ -54,15 +54,15 @@ def is_image_file(filename: str) -> bool:
 
 
 def make_dataset(
-        directory: str,
-        class_to_idx: Dict[str, int],
-        extensions: Optional[Tuple[str, ...]] = None,
-        is_valid_file: Optional[Callable[[str], bool]] = None,
-        cache_path: Optional[str] = None,
+    directory: str,
+    class_to_idx: Dict[str, int],
+    extensions: Optional[Tuple[str, ...]] = None,
+    is_valid_file: Optional[Callable[[str], bool]] = None,
+    cache_path: Optional[str] = None,
 ) -> List[Tuple[str, int]]:
     if cache_path is not None and os.path.exists(cache_path):
         # Load cached file paths from disk if it exists
-        with open(cache_path, 'rb') as f:
+        with open(cache_path, "rb") as f:
             return pickle.load(f)
     instances = []
     directory = os.path.expanduser(directory)
@@ -71,8 +71,10 @@ def make_dataset(
     if both_none or both_something:
         raise ValueError("Both extensions and is_valid_file cannot be None or not None at the same time")
     if extensions is not None:
+
         def is_valid_file(x: str) -> bool:
             return has_file_allowed_extension(x, cast(Tuple[str, ...], extensions))
+
     is_valid_file = cast(Callable[[str], bool], is_valid_file)
     for target_class in sorted(class_to_idx.keys()):
         class_index = class_to_idx[target_class]
@@ -88,7 +90,7 @@ def make_dataset(
     if cache_path is not None:
         # Cache all file paths s.t. setting up the dataloader is instant in the future
         os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-        with open(cache_path, 'wb') as f:
+        with open(cache_path, "wb") as f:
             pickle.dump(instances, f)
     return instances
 
@@ -126,16 +128,15 @@ class DatasetFolder(VisionDataset):
     """
 
     def __init__(
-            self,
-            root: str,
-            loader: Callable[[str], Any],
-            extensions: Optional[Tuple[str, ...]] = None,
-            transform: Optional[Callable] = None,
-            target_transform: Optional[Callable] = None,
-            is_valid_file: Optional[Callable[[str], bool]] = None,
+        self,
+        root: str,
+        loader: Callable[[str], Any],
+        extensions: Optional[Tuple[str, ...]] = None,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        is_valid_file: Optional[Callable[[str], bool]] = None,
     ) -> None:
-        super(DatasetFolder, self).__init__(root, transform=transform,
-                                            target_transform=target_transform)
+        super(DatasetFolder, self).__init__(root, transform=transform, target_transform=target_transform)
         classes, class_to_idx = self._find_classes(self.root)
         samples = make_dataset(self.root, class_to_idx, extensions, is_valid_file)
         if len(samples) == 0:
@@ -236,18 +237,18 @@ class MultiModalDatasetFolder(VisionDataset):
     """
 
     def __init__(
-            self,
-            root: str,
-            modalities: List[str],
-            modality_paths: Dict[str, str],
-            modality_transforms: Dict[str, AbstractTransform],
-            transform: Optional[Callable] = None,
-            target_transform: Optional[Callable] = None,
-            is_valid_file: Optional[Callable[[str], bool]] = None,
-            max_samples: Optional[int] = None,
-            pre_shuffle: bool = False,
-            cache: bool = False,
-            return_path: bool = False,
+        self,
+        root: str,
+        modalities: List[str],
+        modality_paths: Dict[str, str],
+        modality_transforms: Dict[str, AbstractTransform],
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        is_valid_file: Optional[Callable[[str], bool]] = None,
+        max_samples: Optional[int] = None,
+        pre_shuffle: bool = False,
+        cache: bool = False,
+        return_path: bool = False,
     ) -> None:
         super(MultiModalDatasetFolder, self).__init__(root, transform=transform, target_transform=target_transform)
         self.modalities = modalities
@@ -264,17 +265,22 @@ class MultiModalDatasetFolder(VisionDataset):
 
         samples = {
             mod: make_dataset(
-                os.path.join(self.root, f'{self.modality_paths[mod]}'),
-                class_to_idx, 
-                extensions, 
+                os.path.join(self.root, f"{self.modality_paths[mod]}"),
+                class_to_idx,
+                extensions,
                 is_valid_file,
-                cache_path=os.path.join(self.root, 'dataloader_cache', f'{self.modality_paths[mod]}.pkl') if cache else None)
+                cache_path=(
+                    os.path.join(self.root, "dataloader_cache", f"{self.modality_paths[mod]}.pkl") if cache else None
+                ),
+            )
             for mod in self.modalities
         }
-        
+
         for mod, mod_samples in samples.items():
             if len(mod_samples) == 0:
-                msg = "Found 0 logs in subfolders of: {}\n".format(os.path.join(self.root, f'{self.modality_paths[mod]}'))
+                msg = "Found 0 logs in subfolders of: {}\n".format(
+                    os.path.join(self.root, f"{self.modality_paths[mod]}")
+                )
                 if extensions is not None:
                     msg += "Supported extensions are: {}".format(",".join(extensions))
                 raise RuntimeError(msg)
@@ -292,7 +298,7 @@ class MultiModalDatasetFolder(VisionDataset):
             permutation = np.random.permutation(total_samples)
             for task in samples:
                 self.samples[task] = [self.samples[task][i] for i in permutation][:max_samples]
-        
+
         if pre_shuffle:
             total_samples = len(list(self.samples.values())[0])
             np.random.seed(100)
@@ -320,11 +326,11 @@ class MultiModalDatasetFolder(VisionDataset):
         classes.sort()
         class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
         return classes, class_to_idx
-    
+
     def get_class_and_file(self, path: str) -> Tuple[str, str]:
-        """ Extracts the class and file name from a path. """
-        class_id, file_name = path.split('/')[-2:]
-        file_name = file_name.split('.')[0]
+        """Extracts the class and file name from a path."""
+        class_id, file_name = path.split("/")[-2:]
+        file_name = file_name.split(".")[0]
         return class_id, file_name
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
@@ -350,12 +356,12 @@ class MultiModalDatasetFolder(VisionDataset):
         if self.target_transform is not None:
             target = self.target_transform(target)
 
-        sample_dict['class_idx'] = target
+        sample_dict["class_idx"] = target
 
         if self.return_path and not index in self.cache:
             class_id, file_name = self.get_class_and_file(path)
-            sample_dict['class_id'] = class_id
-            sample_dict['file_name'] = file_name
+            sample_dict["class_id"] = class_id
+            sample_dict["file_name"] = file_name
 
         return sample_dict
 

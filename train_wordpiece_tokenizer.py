@@ -18,19 +18,31 @@ from fourm.utils.tokenizer import generate_sentinel_tokens, generate_coord_token
 
 
 def get_args():
-    parser = argparse.ArgumentParser('Train unified WordPiece tokenizer', add_help=False)
-    parser.add_argument('--text_files', type=str, default='/datasets/imagenet_multitask/metadata/all_captions_BLIP.txt',
-                        help="Files to train the tokenizer on, separated by a double dash '--'")
-    parser.add_argument('--save_file', type=str, default="utils/tokenizer/trained/default_tokenizer.json",
-                        help="Path to the saved tokenizer. Can then be loaded using Tokenizer.from_file(path).")
-    parser.add_argument('--vocab_size', type=int, default=30_000,
-                        help="Vocabulary size")
-    parser.add_argument('--num_sentinels', type=int, default=200, help="Number of sentinel tokens")
-    parser.add_argument('--coord_bins', type=int, default=1000, help="Number of coordinate bins (for detection)")
-    parser.add_argument('--object_classes', type=str, default='coco', choices=['none', 'coco'],
-                        help="Special tokens for detection instances (e.g., instance class names from the COCO dataset)")
-    parser.add_argument('--lowercase', action='store_true')
-    parser.add_argument('--no_lowercase', action='store_false', dest='lowercase')
+    parser = argparse.ArgumentParser("Train unified WordPiece tokenizer", add_help=False)
+    parser.add_argument(
+        "--text_files",
+        type=str,
+        default="/datasets/imagenet_multitask/metadata/all_captions_BLIP.txt",
+        help="Files to train the tokenizer on, separated by a double dash '--'",
+    )
+    parser.add_argument(
+        "--save_file",
+        type=str,
+        default="utils/tokenizer/trained/default_tokenizer.json",
+        help="Path to the saved tokenizer. Can then be loaded using Tokenizer.from_file(path).",
+    )
+    parser.add_argument("--vocab_size", type=int, default=30_000, help="Vocabulary size")
+    parser.add_argument("--num_sentinels", type=int, default=200, help="Number of sentinel tokens")
+    parser.add_argument("--coord_bins", type=int, default=1000, help="Number of coordinate bins (for detection)")
+    parser.add_argument(
+        "--object_classes",
+        type=str,
+        default="coco",
+        choices=["none", "coco"],
+        help="Special tokens for detection instances (e.g., instance class names from the COCO dataset)",
+    )
+    parser.add_argument("--lowercase", action="store_true")
+    parser.add_argument("--no_lowercase", action="store_false", dest="lowercase")
     parser.set_defaults(lowercase=True)
     return parser.parse_args()
 
@@ -41,7 +53,7 @@ def train_tokenizer(args):
     # Get special tokens
     sentinel_tokens = generate_sentinel_tokens(num=args.num_sentinels)
     coord_tokens = generate_coord_tokens(bins=args.coord_bins)
-    if args.object_classes == 'none':
+    if args.object_classes == "none":
         object_class_tokens = None
     else:
         object_class_tokens = generate_object_class_tokens(args.object_classes)

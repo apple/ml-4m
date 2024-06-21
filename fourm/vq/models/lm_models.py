@@ -25,14 +25,18 @@ import torch.nn.functional as F
 from diffusers.models.unet_2d_blocks import UNetMidBlock2D, get_up_block
 
 
-FREEZE_MODULES = ['encoder', 'quant_proj', 'quantize', 'cls_emb']
+FREEZE_MODULES = ["encoder", "quant_proj", "quantize", "cls_emb"]
+
 
 class Token2VAE(nn.Module):
     def __init__(
         self,
         in_channels=32,
         output_type="stats",
-        up_block_types=("UpDecoderBlock2D", "UpDecoderBlock2D",),
+        up_block_types=(
+            "UpDecoderBlock2D",
+            "UpDecoderBlock2D",
+        ),
         block_out_channels=(256, 512),
         layers_per_block=2,
         norm_num_groups=32,
@@ -102,7 +106,7 @@ class Token2VAE(nn.Module):
         self.conv_act = nn.SiLU()
         self.conv_out = nn.Conv2d(block_out_channels[0], out_channels, 3, padding=1)
 
-        self.vq_model = vq_model        
+        self.vq_model = vq_model
         self.vae = vae
 
     @torch.no_grad()
@@ -133,8 +137,8 @@ class Token2VAE(nn.Module):
         return x
 
     def forward(self, quant=None, image=None):
-        
-        if quant is None: 
+
+        if quant is None:
             assert image is not None, "Neither of `quant` or `image` are provided"
             assert self.vq_model is not None, "VQ encoder is not initialized"
             with torch.no_grad():
@@ -159,6 +163,7 @@ class Token2VAE(nn.Module):
 
         return x
 
+
 def create_model(
     in_channels=32,
     output_type="stats",
@@ -168,7 +173,10 @@ def create_model(
     return Token2VAE(
         in_channels=in_channels,
         output_type=output_type,
-        up_block_types=("UpDecoderBlock2D", "UpDecoderBlock2D",),
+        up_block_types=(
+            "UpDecoderBlock2D",
+            "UpDecoderBlock2D",
+        ),
         block_out_channels=(256, 512),
         layers_per_block=2,
         norm_num_groups=32,

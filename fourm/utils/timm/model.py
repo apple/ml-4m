@@ -18,7 +18,7 @@ def unwrap_model(model):
     if isinstance(model, ModelEma):
         return unwrap_model(model.ema)
     else:
-        return model.module if hasattr(model, 'module') else model
+        return model.module if hasattr(model, "module") else model
 
 
 def get_state_dict(model, unwrap_fn=unwrap_model):
@@ -26,38 +26,35 @@ def get_state_dict(model, unwrap_fn=unwrap_model):
 
 
 def avg_sq_ch_mean(model, input, output):
-    """ calculate average channel square mean of output activations
-    """
+    """calculate average channel square mean of output activations"""
     return torch.mean(output.mean(axis=[0, 2, 3]) ** 2).item()
 
 
 def avg_ch_var(model, input, output):
-    """ calculate average channel variance of output activations
-    """
+    """calculate average channel variance of output activations"""
     return torch.mean(output.var(axis=[0, 2, 3])).item()
 
 
 def avg_ch_var_residual(model, input, output):
-    """ calculate average channel variance of output activations
-    """
+    """calculate average channel variance of output activations"""
     return torch.mean(output.var(axis=[0, 2, 3])).item()
 
 
 class ActivationStatsHook:
-    """Iterates through each of `model`'s modules and matches modules using unix pattern 
-    matching based on `hook_fn_locs` and registers `hook_fn` to the module if there is 
-    a match. 
+    """Iterates through each of `model`'s modules and matches modules using unix pattern
+    matching based on `hook_fn_locs` and registers `hook_fn` to the module if there is
+    a match.
 
     Arguments:
         model (nn.Module): model from which we will extract the activation stats
-        hook_fn_locs (List[str]): List of `hook_fn` locations based on Unix type string 
-            matching with the name of model's modules. 
+        hook_fn_locs (List[str]): List of `hook_fn` locations based on Unix type string
+            matching with the name of model's modules.
         hook_fns (List[Callable]): List of hook functions to be registered at every
             module in `layer_names`.
-    
+
     Inspiration from https://docs.fast.ai/callback.hook.html.
 
-    Refer to https://gist.github.com/amaarora/6e56942fcb46e67ba203f3009b30d950 for an example 
+    Refer to https://gist.github.com/amaarora/6e56942fcb46e67ba203f3009b30d950 for an example
     on how to plot Signal Propogation Plots using `ActivationStatsHook`.
     """
 
@@ -66,8 +63,10 @@ class ActivationStatsHook:
         self.hook_fn_locs = hook_fn_locs
         self.hook_fns = hook_fns
         if len(hook_fn_locs) != len(hook_fns):
-            raise ValueError("Please provide `hook_fns` for each `hook_fn_locs`, \
-                their lengths are different.")
+            raise ValueError(
+                "Please provide `hook_fns` for each `hook_fn_locs`, \
+                their lengths are different."
+            )
         self.stats = dict((hook_fn.__name__, []) for hook_fn in hook_fns)
         for hook_fn_loc, hook_fn in zip(hook_fn_locs, hook_fns):
             self.register_hook(hook_fn_loc, hook_fn)
@@ -86,19 +85,15 @@ class ActivationStatsHook:
             module.register_forward_hook(self._create_hook(hook_fn))
 
 
-def extract_spp_stats(
-        model,
-        hook_fn_locs,
-        hook_fns,
-        input_shape=[8, 3, 224, 224]):
-    """Extract average square channel mean and variance of activations during 
+def extract_spp_stats(model, hook_fn_locs, hook_fns, input_shape=[8, 3, 224, 224]):
+    """Extract average square channel mean and variance of activations during
     forward pass to plot Signal Propogation Plots (SPP).
-    
+
     Paper: https://arxiv.org/abs/2101.08692
 
     Example Usage: https://gist.github.com/amaarora/6e56942fcb46e67ba203f3009b30d950
     """
-    x = torch.normal(0., 1., input_shape)
+    x = torch.normal(0.0, 1.0, input_shape)
     hook = ActivationStatsHook(model, hook_fn_locs=hook_fn_locs, hook_fns=hook_fns)
     _ = model(x)
     return hook.stats
@@ -168,7 +163,7 @@ def unfreeze_batch_norm_2d(module):
     return res
 
 
-def _freeze_unfreeze(root_module, submodules=[], include_bn_running_stats=True, mode='freeze'):
+def _freeze_unfreeze(root_module, submodules=[], include_bn_running_stats=True, mode="freeze"):
     """
     Freeze or unfreeze parameters of the specified modules and those of all their hierarchical descendants. This is
     done in place.
@@ -187,7 +182,8 @@ def _freeze_unfreeze(root_module, submodules=[], include_bn_running_stats=True, 
         # Raise assertion here because we can't convert it in place
         raise AssertionError(
             "You have provided a batch norm layer as the `root module`. Please use "
-            "`timm.utils.model.freeze_batch_norm_2d` or `timm.utils.model.unfreeze_batch_norm_2d` instead.")
+            "`timm.utils.model.freeze_batch_norm_2d` or `timm.utils.model.unfreeze_batch_norm_2d` instead."
+        )
 
     if isinstance(submodules, str):
         submodules = [submodules]
@@ -201,18 +197,18 @@ def _freeze_unfreeze(root_module, submodules=[], include_bn_running_stats=True, 
     for n, m in zip(named_modules, submodules):
         # (Un)freeze parameters
         for p in m.parameters():
-            p.requires_grad = False if mode == 'freeze' else True
+            p.requires_grad = False if mode == "freeze" else True
         if include_bn_running_stats:
             # Helper to add submodule specified as a named_module
             def _add_submodule(module, name, submodule):
-                split = name.rsplit('.', 1)
+                split = name.rsplit(".", 1)
                 if len(split) > 1:
                     module.get_submodule(split[0]).add_module(split[1], submodule)
                 else:
                     module.add_module(name, submodule)
 
             # Freeze batch norm
-            if mode == 'freeze':
+            if mode == "freeze":
                 res = freeze_batch_norm_2d(m)
                 # It's possible that `m` is a type of BatchNorm in itself, in which case `unfreeze_batch_norm_2d` won't
                 # convert it in place, but will return the converted result. In this case `res` holds the converted

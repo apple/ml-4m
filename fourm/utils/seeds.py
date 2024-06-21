@@ -13,20 +13,21 @@
 # limitations under the License.
 import hashlib
 
+
 def generate_seed(*seeds):
     # Create a hash object using the SHA-256 algorithm
     hash_object = hashlib.sha256()
 
     # Combine all seeds into a single string
-    combined_seeds = ''.join(str(seed) for seed in seeds)
+    combined_seeds = "".join(str(seed) for seed in seeds)
 
     # Update the hash object with the combined seeds
-    hash_object.update(combined_seeds.encode('utf-8'))
+    hash_object.update(combined_seeds.encode("utf-8"))
 
     # Get the hexadecimal digest of the hash object
     hex_digest = hash_object.hexdigest()
 
     # Convert the hexadecimal digest to a 32-bit integer
     seed_int = int(hex_digest, 16) % 2**32
-    
+
     return seed_int

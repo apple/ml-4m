@@ -14,14 +14,15 @@
 import torch
 from torch.utils.data import Dataset
 
+
 class EmptyDataset(Dataset):
     """Empty dataset"""
 
     def __init__(self, dataset_size: int):
         self.dataset_size = dataset_size
-        
+
     def __getitem__(self, index):
         return {}
-    
+
     def __len__(self):
         return self.dataset_size

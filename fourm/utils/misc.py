@@ -29,16 +29,12 @@ def denormalize(img, mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD):
         mean (tuple): Mean to use for denormalization.
         std (tuple): Standard deviation to use for denormalization.
     """
-    return TF.normalize(
-        img.clone(),
-        mean= [-m/s for m, s in zip(mean, std)],
-        std= [1/s for s in std]
-    )
+    return TF.normalize(img.clone(), mean=[-m / s for m, s in zip(mean, std)], std=[1 / s for s in std])
 
 
 def generate_uint15_hash(seed_str):
     """Generates a hash of the seed string as an unsigned int15 integer"""
-    return int(hashlib.sha256(seed_str.encode('utf-8')).hexdigest(), 16) % (2**15)
+    return int(hashlib.sha256(seed_str.encode("utf-8")).hexdigest(), 16) % (2**15)
 
 
 # From PyTorch internals

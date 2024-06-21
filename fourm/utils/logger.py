@@ -55,7 +55,7 @@ class SmoothedValue(object):
         """
         if not is_dist_avail_and_initialized():
             return
-        t = torch.tensor([self.count, self.total], dtype=torch.float64, device='cuda')
+        t = torch.tensor([self.count, self.total], dtype=torch.float64, device="cuda")
         dist.barrier()
         dist.all_reduce(t)
         t = t.tolist()
@@ -86,11 +86,8 @@ class SmoothedValue(object):
 
     def __str__(self):
         return self.fmt.format(
-            median=self.median,
-            avg=self.avg,
-            global_avg=self.global_avg,
-            max=self.max,
-            value=self.value)
+            median=self.median, avg=self.avg, global_avg=self.global_avg, max=self.max, value=self.value
+        )
 
 
 class MetricLogger(object):
@@ -112,15 +109,12 @@ class MetricLogger(object):
             return self.meters[attr]
         if attr in self.__dict__:
             return self.__dict__[attr]
-        raise AttributeError("'{}' object has no attribute '{}'".format(
-            type(self).__name__, attr))
+        raise AttributeError("'{}' object has no attribute '{}'".format(type(self).__name__, attr))
 
     def __str__(self):
         loss_str = []
         for name, meter in self.meters.items():
-            loss_str.append(
-                "{}: {}".format(name, str(meter))
-            )
+            loss_str.append("{}: {}".format(name, str(meter)))
         return self.delimiter.join(loss_str)
 
     def synchronize_between_processes(self):
@@ -134,22 +128,15 @@ class MetricLogger(object):
         iter_len = iter_len if iter_len is not None else len(iterable)
         i = 0
         if not header:
-            header = ''
+            header = ""
         start_time = time.time()
         end = time.time()
-        iter_time = SmoothedValue(fmt='{avg:.4f}')
-        data_time = SmoothedValue(fmt='{avg:.4f}')
-        space_fmt = ':' + str(len(str(iter_len))) + 'd'
-        log_msg = [
-            header,
-            '[{0' + space_fmt + '}/{1}]',
-            'eta: {eta}',
-            '{meters}',
-            'time: {time}',
-            'data: {data}'
-        ]
+        iter_time = SmoothedValue(fmt="{avg:.4f}")
+        data_time = SmoothedValue(fmt="{avg:.4f}")
+        space_fmt = ":" + str(len(str(iter_len))) + "d"
+        log_msg = [header, "[{0" + space_fmt + "}/{1}]", "eta: {eta}", "{meters}", "time: {time}", "data: {data}"]
         if torch.cuda.is_available():
-            log_msg.append('max mem: {memory:.0f}')
+            log_msg.append("max mem: {memory:.0f}")
         log_msg = self.delimiter.join(log_msg)
         MB = 1024.0 * 1024.0
         for obj in iterable:
@@ -161,25 +148,36 @@ class MetricLogger(object):
                     eta_seconds = iter_time.global_avg * (iter_len - i)
                     eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
                 else:
-                    eta_string = '?'
+                    eta_string = "?"
                 if torch.cuda.is_available():
-                    print(log_msg.format(
-                        i, iter_len if iter_len > 0 else '?', eta=eta_string,
-                        meters=str(self),
-                        time=str(iter_time), data=str(data_time),
-                        memory=torch.cuda.max_memory_allocated() / MB))
+                    print(
+                        log_msg.format(
+                            i,
+                            iter_len if iter_len > 0 else "?",
+                            eta=eta_string,
+                            meters=str(self),
+                            time=str(iter_time),
+                            data=str(data_time),
+                            memory=torch.cuda.max_memory_allocated() / MB,
+                        )
+                    )
                 else:
-                    print(log_msg.format(
-                        i, iter_len if iter_len > 0 else '?', eta=eta_string,
-                        meters=str(self),
-                        time=str(iter_time), data=str(data_time)))
+                    print(
+                        log_msg.format(
+                            i,
+                            iter_len if iter_len > 0 else "?",
+                            eta=eta_string,
+                            meters=str(self),
+                            time=str(iter_time),
+                            data=str(data_time),
+                        )
+                    )
             i += 1
             end = time.time()
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
-        time_per_iter_str = '{:.4f}'.format(total_time / iter_len) if iter_len > 0 else '?'
-        print('{} Total time: {} ({} s / it)'.format(
-            header, total_time_str, time_per_iter_str))
+        time_per_iter_str = "{:.4f}".format(total_time / iter_len) if iter_len > 0 else "?"
+        print("{} Total time: {} ({} s / it)".format(header, total_time_str, time_per_iter_str))
 
 
 class WandbLogger(object):
@@ -188,10 +186,10 @@ class WandbLogger(object):
             config=args,
             entity=args.wandb_entity,
             project=args.wandb_project,
-            group=getattr(args, 'wandb_group', None),
-            name=getattr(args, 'wandb_run_name', None),
-            tags=getattr(args, 'wandb_tags', None),
-            mode=getattr(args, 'wandb_mode', 'online'),
+            group=getattr(args, "wandb_group", None),
+            name=getattr(args, "wandb_run_name", None),
+            tags=getattr(args, "wandb_tags", None),
+            mode=getattr(args, "wandb_mode", "online"),
         )
 
     @staticmethod
@@ -199,7 +197,7 @@ class WandbLogger(object):
         try:
             wandb.log(*args, **kwargs)
         except (wandb.CommError, BrokenPipeError):
-            logging.error('wandb logging failed, skipping...')
+            logging.error("wandb logging failed, skipping...")
 
     def set_step(self, step=None):
         if step is not None:
@@ -225,4 +223,4 @@ class WandbLogger(object):
         try:
             wandb.finish()
         except (wandb.CommError, BrokenPipeError):
-            logging.error('wandb failed to finish')
+            logging.error("wandb failed to finish")

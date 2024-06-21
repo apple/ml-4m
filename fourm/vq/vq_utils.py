@@ -16,10 +16,9 @@ import numpy as np
 
 
 def compute_codebook_usage(
-        all_tokens: torch.LongTensor, 
-        codebook_size: int = 16_384, 
-        window_size: int = 65_536) -> float:
-    """Computes the codebook usage for a given set of encoded tokens, by computing the 
+    all_tokens: torch.LongTensor, codebook_size: int = 16_384, window_size: int = 65_536
+) -> float:
+    """Computes the codebook usage for a given set of encoded tokens, by computing the
     percentage of unique tokens in windows of a given size. The window size should be
     chosen as batch_size * sequence_length, where batch_size is recommended to be set
     to 256, and the sequence_length is the number of tokens per image. We follow
@@ -34,7 +33,7 @@ def compute_codebook_usage(
         The average codebook usage.
     """
     n_full_windows = all_tokens.shape[0] // window_size
-    
+
     percentages = []
     for i, token_window in enumerate(torch.split(all_tokens, window_size)):
         if i < n_full_windows:
@@ -42,5 +41,5 @@ def compute_codebook_usage(
             percentages.append(usage_perc)
         else:
             break
-            
+
     return np.mean(percentages)
