@@ -29,23 +29,22 @@ from fourm.data.modality_info import MODALITY_INFO
 
 __all__ = [
     # GELU models
-    "fm_vit_tiny_6e_gelu",
-    "fm_vit_small_8e_gelu",
-    "fm_vit_base_12e_gelu",
-    "fm_vit_large_24e_gelu",
-    "fm_vit_xlarge_24e_gelu",
+    'fm_vit_tiny_6e_gelu',
+    'fm_vit_small_8e_gelu',
+    'fm_vit_base_12e_gelu',
+    'fm_vit_large_24e_gelu',
+    'fm_vit_xlarge_24e_gelu',
     # SwiGLU models
-    "fm_vit_tiny_6e_swiglu_nobias",
-    "fm_vit_small_8e_swiglu_nobias",
-    "fm_vit_base_12e_swiglu_nobias",
-    "fm_vit_large_24e_swiglu_nobias",
-    "fm_vit_xlarge_24e_swiglu_nobias",
+    'fm_vit_tiny_6e_swiglu_nobias',
+    'fm_vit_small_8e_swiglu_nobias',
+    'fm_vit_base_12e_swiglu_nobias',
+    'fm_vit_large_24e_swiglu_nobias',
+    'fm_vit_xlarge_24e_swiglu_nobias',
     # SwiGLU + QKNorm models
-    "fm_vit_base_12e_swiglu_qknorm_nobias",
-    "fm_vit_large_24e_swiglu_qknorm_nobias",
-    "fm_vit_xlarge_24e_swiglu_qknorm_nobias",
+    'fm_vit_base_12e_swiglu_qknorm_nobias',
+    'fm_vit_large_24e_swiglu_qknorm_nobias',
+    'fm_vit_xlarge_24e_swiglu_qknorm_nobias',
 ]
-
 
 class FourMViT(nn.Module):
     """Modified 4M model, adapted to behave as a simple RGB-only ViT.
@@ -72,7 +71,6 @@ class FourMViT(nn.Module):
         encoder_norm (bool): If True, adds a norm layer after the last encoder block.
         output_head (Optional[nn.Module]): Optional output head after the encoder
     """
-
     def __init__(
         self,
         img_size=224,
@@ -85,48 +83,33 @@ class FourMViT(nn.Module):
         qkv_bias: bool = True,
         proj_bias: bool = True,
         mlp_bias: bool = True,
-        drop_path_rate: float = 0.0,
+        drop_path_rate: float =0.0,
         drop_rate: float = 0.0,
-        attn_drop_rate: float = 0.0,
-        act_layer: torch.Tensor = nn.GELU,
+        attn_drop_rate: float =0.0,
+        act_layer: torch.Tensor =nn.GELU,
         norm_layer: Union[partial, nn.Module] = partial(LayerNorm, eps=1e-6),
-        gated_mlp: bool = False,  # Make the feedforward gated for e.g. SwiGLU
+        gated_mlp: bool = False, # Make the feedforward gated for e.g. SwiGLU
         qk_norm: bool = False,
-        encoder_norm=True,
+        encoder_norm = True,
         output_head: Optional[nn.Module] = None,
     ):
         super().__init__()
         self.img_size = img_size
         self.init_std = 0.02
-        rgb_embedding = ImageEncoderEmbedding(
-            num_channels=in_chans, patch_size=patch_size, dim_tokens=dim, sincos_pos_emb=True, image_size=img_size
-        )
+        rgb_embedding = ImageEncoderEmbedding(num_channels=in_chans, patch_size=patch_size,
+                                              dim_tokens=dim, sincos_pos_emb=True, image_size=img_size)
         self.num_patches = rgb_embedding.num_patches
         self.encoder_embeddings = nn.ModuleDict({f"rgb@{img_size}": rgb_embedding})
 
         # stochastic depth decay rule
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, encoder_depth)]
 
-        self.encoder = nn.ModuleList(
-            [
-                Block(
-                    dim=dim,
-                    num_heads=num_heads,
-                    mlp_ratio=mlp_ratio,
-                    qkv_bias=qkv_bias,
-                    proj_bias=proj_bias,
-                    mlp_bias=mlp_bias,
-                    drop_path=dpr[i],
-                    drop=drop_rate,
-                    attn_drop=attn_drop_rate,
-                    act_layer=act_layer,
-                    norm_layer=norm_layer,
-                    gated_mlp=gated_mlp,
-                    qk_norm=qk_norm,
-                )
-                for i in range(encoder_depth)
-            ]
-        )
+        self.encoder = nn.ModuleList([
+            Block(dim=dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, proj_bias=proj_bias, mlp_bias=mlp_bias,
+                 drop_path=dpr[i], drop=drop_rate, attn_drop=attn_drop_rate, act_layer=act_layer, norm_layer=norm_layer, 
+                 gated_mlp=gated_mlp, qk_norm=qk_norm)
+            for i in range(encoder_depth)
+        ])
 
         self.encoder_norm = norm_layer(dim) if encoder_norm else nn.Identity()
 
@@ -136,7 +119,7 @@ class FourMViT(nn.Module):
         # Classification head is initialized after init_weights() to allow for special init scale
         if output_head is not None:
             self.output_head = output_head
-            if hasattr(self.output_head, "init"):
+            if hasattr(self.output_head, 'init'):
                 self.output_head.init(dim)
         else:
             self.output_head = nn.Identity()
@@ -150,13 +133,13 @@ class FourMViT(nn.Module):
                 continue
             # Linear
             elif isinstance(m, nn.Linear):
-                if "qkv" in name:
+                if 'qkv' in name:
                     # treat the weights of Q, K, V separately
-                    val = math.sqrt(6.0 / float(m.weight.shape[0] // 3 + m.weight.shape[1]))
+                    val = math.sqrt(6. / float(m.weight.shape[0] // 3 + m.weight.shape[1]))
                     nn.init.uniform_(m.weight, -val, val)
-                elif "kv" in name:
+                elif 'kv' in name:
                     # treat the weights of K, V separately
-                    val = math.sqrt(6.0 / float(m.weight.shape[0] // 2 + m.weight.shape[1]))
+                    val = math.sqrt(6. / float(m.weight.shape[0] // 2 + m.weight.shape[1]))
                     nn.init.uniform_(m.weight, -val, val)
                 else:
                     nn.init.xavier_uniform_(m.weight)
@@ -172,28 +155,29 @@ class FourMViT(nn.Module):
                 nn.init.normal_(m.weight, std=self.init_std)
             # Conv2d
             elif isinstance(m, nn.Conv2d):
-                if ".proj" in name:
+                if '.proj' in name:
                     # From MAE, initialize projection like nn.Linear (instead of nn.Conv2d)
                     w = m.weight.data
                     nn.init.xavier_uniform_(w.view([w.shape[0], -1]))
 
     def get_num_layers_encoder(self):
         return len(self.encoder)
-
+    
     def get_num_layers(self):
         return self.get_num_layers_encoder()
-
+    
     @torch.jit.ignore
     def no_weight_decay(self):
         no_wd_set = set()
 
         for mod, emb_module in self.encoder_embeddings.items():
-            if hasattr(emb_module, "no_weight_decay"):
+            if hasattr(emb_module, 'no_weight_decay'):
                 to_skip = emb_module.no_weight_decay()
-                to_skip = set([f"encoder_embeddings.{mod}.{name}" for name in to_skip])
+                to_skip = set([f'encoder_embeddings.{mod}.{name}' for name in to_skip])
                 no_wd_set = no_wd_set | to_skip
 
         return no_wd_set
+    
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -205,21 +189,22 @@ class FourMViT(nn.Module):
         Returns:
             torch.Tensor: Output tensor. Shape (B, num_classes).
         """
-        rgb_dict = {"tensor": x}
-        rgb_dict = self.encoder_embeddings[f"rgb@{self.img_size}"](rgb_dict)
+        rgb_dict = {'tensor': x}
+        rgb_dict = self.encoder_embeddings[f'rgb@{self.img_size}'](rgb_dict)
 
-        # Add embeddings to patchified RGB image
-        x = rgb_dict["x"] + rgb_dict["emb"]  # Shape: (B, N, D) with N = num_patches
+        # Add embeddings to patchified RGB image 
+        x = rgb_dict['x'] + rgb_dict['emb'] # Shape: (B, N, D) with N = num_patches
 
         for blk in self.encoder:
             x = blk(x)
 
-        x = self.encoder_norm(x)  # Shape: (B, N, D)
+        x = self.encoder_norm(x) # Shape: (B, N, D) 
 
         out = self.output_head(x)
 
         return out
-
+    
+    
     def freeze_encoder(self, freeze_embeddings=True):
         for param in self.encoder.parameters():
             param.requires_grad = False
@@ -247,47 +232,42 @@ class FourMViT(nn.Module):
 
 # Wrapper for easy loading with Huggingface Hub
 
-
 class FMViT(FourMViT, PyTorchModelHubMixin):
     """Wrapper around FourMViT for easy loading with Huggingface Hub.
 
     Args:
-        config (dict): Dictionary containing the model and modality configuration,
+        config (dict): Dictionary containing the model and modality configuration, 
             used for loading from Huggingface Hub.
         output_head (nn.Module): Optional output head.
     """
-
     def __init__(self, config: dict, output_head: Optional[nn.Module] = None):
 
         config = copy.deepcopy(config)
 
-        config["norm_layer"] = partial(LayerNorm, eps=1e-6, bias=config["norm_bias"])
-        config["act_layer"] = getattr(torch.nn, config["act_layer"])
+        
 
-        img_size = config["image_size"]
-        config["img_size"] = img_size
-        config["patch_size"] = MODALITY_INFO[f"rgb@{img_size}"].get("patch_size", config["patch_size"])
-        config["in_chans"] = MODALITY_INFO[f"rgb@{img_size}"].get("num_channels", 3)
+        config['norm_layer'] = partial(LayerNorm, eps=1e-6, bias=config['norm_bias'])
+        config['act_layer'] = getattr(torch.nn, config['act_layer'])
 
-        for key in [
-            "image_size",
-            "norm_bias",
-            "domains_in",
-            "domains_out",
-            "decoder_depth",
-            "share_modality_embeddings",
-        ]:
+        img_size = config['image_size']
+        config['img_size'] = img_size
+        config['patch_size'] = MODALITY_INFO[f'rgb@{img_size}'].get('patch_size', config['patch_size'])
+        config['in_chans'] = MODALITY_INFO[f'rgb@{img_size}'].get('num_channels', 3)
+
+        for key in ['image_size', 'norm_bias', 'domains_in', 'domains_out', 'decoder_depth', 'share_modality_embeddings']:
             if key in config:
                 del config[key]
 
-        super().__init__(output_head=output_head, **config)
+        super().__init__(
+            output_head=output_head,
+            **config
+        )   
 
 
 ################################################
 
 # Model definitions
-
-
+                
 # GELU variants
 @register_model
 def fm_vit_tiny_6e_gelu(**kwargs):
@@ -298,7 +278,7 @@ def fm_vit_tiny_6e_gelu(**kwargs):
         mlp_ratio=4,
         qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
-        **kwargs,
+        **kwargs
     )
     return model
 
@@ -312,7 +292,7 @@ def fm_vit_small_8e_gelu(**kwargs):
         mlp_ratio=4,
         qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
-        **kwargs,
+        **kwargs
     )
     return model
 
@@ -326,7 +306,7 @@ def fm_vit_base_12e_gelu(**kwargs):
         mlp_ratio=4,
         qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
-        **kwargs,
+        **kwargs
     )
     return model
 
@@ -340,10 +320,9 @@ def fm_vit_large_24e_gelu(**kwargs):
         mlp_ratio=4,
         qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
-        **kwargs,
+        **kwargs
     )
     return model
-
 
 @register_model
 def fm_vit_xlarge_24e_gelu(**kwargs):
@@ -354,7 +333,7 @@ def fm_vit_xlarge_24e_gelu(**kwargs):
         mlp_ratio=4,
         qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
-        **kwargs,
+        **kwargs
     )
     return model
 
@@ -373,7 +352,7 @@ def fm_vit_tiny_6e_swiglu_nobias(**kwargs):
         norm_layer=partial(LayerNorm, eps=1e-6, bias=False),
         act_layer=nn.SiLU,
         gated_mlp=True,
-        **kwargs,
+        **kwargs
     )
     return model
 
@@ -391,7 +370,7 @@ def fm_vit_small_8e_swiglu_nobias(**kwargs):
         norm_layer=partial(LayerNorm, eps=1e-6, bias=False),
         act_layer=nn.SiLU,
         gated_mlp=True,
-        **kwargs,
+        **kwargs
     )
     return model
 
@@ -409,7 +388,7 @@ def fm_vit_base_12e_swiglu_nobias(**kwargs):
         norm_layer=partial(LayerNorm, eps=1e-6, bias=False),
         act_layer=nn.SiLU,
         gated_mlp=True,
-        **kwargs,
+        **kwargs
     )
     return model
 
@@ -427,10 +406,9 @@ def fm_vit_large_24e_swiglu_nobias(**kwargs):
         norm_layer=partial(LayerNorm, eps=1e-6, bias=False),
         act_layer=nn.SiLU,
         gated_mlp=True,
-        **kwargs,
+        **kwargs
     )
     return model
-
 
 @register_model
 def fm_vit_xlarge_24e_swiglu_nobias(**kwargs):
@@ -445,13 +423,11 @@ def fm_vit_xlarge_24e_swiglu_nobias(**kwargs):
         norm_layer=partial(LayerNorm, eps=1e-6, bias=False),
         act_layer=nn.SiLU,
         gated_mlp=True,
-        **kwargs,
+        **kwargs
     )
     return model
 
-
 # SwiGLU + QKNorm variants
-
 
 @register_model
 def fm_vit_base_12e_swiglu_qknorm_nobias(**kwargs):
@@ -467,7 +443,7 @@ def fm_vit_base_12e_swiglu_qknorm_nobias(**kwargs):
         act_layer=nn.SiLU,
         gated_mlp=True,
         qk_norm=True,
-        **kwargs,
+        **kwargs
     )
     return model
 
@@ -486,10 +462,9 @@ def fm_vit_large_24e_swiglu_qknorm_nobias(**kwargs):
         act_layer=nn.SiLU,
         gated_mlp=True,
         qk_norm=True,
-        **kwargs,
+        **kwargs
     )
     return model
-
 
 @register_model
 def fm_vit_xlarge_24e_swiglu_qknorm_nobias(**kwargs):
@@ -505,6 +480,6 @@ def fm_vit_xlarge_24e_swiglu_qknorm_nobias(**kwargs):
         act_layer=nn.SiLU,
         gated_mlp=True,
         qk_norm=True,
-        **kwargs,
+        **kwargs
     )
     return model

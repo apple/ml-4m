@@ -30,7 +30,7 @@ class RepeatedDatasetWrapper(Dataset):
     def __getitem__(self, index):
         """
         Retrieve the item at the given index.
-
+        
         Args:
             index (int): The index of the item to be retrieved.
         """
@@ -40,7 +40,7 @@ class RepeatedDatasetWrapper(Dataset):
     def __len__(self):
         """
         Get the length of the dataset after repeating it n times.
-
+        
         Returns:
             int: The length of the dataset.
         """
@@ -62,12 +62,12 @@ class SubsampleDatasetWrapper(Dataset):
         self.dataset_size = dataset_size or len(original_dataset)
         self.return_orig_idx = return_orig_idx
         np.random.seed(seed)
-        self.indices = np.random.permutation(len(self.original_dataset))[: self.dataset_size]
+        self.indices = np.random.permutation(len(self.original_dataset))[:self.dataset_size]
 
     def __getitem__(self, index):
         """
         Retrieve the item at the given index.
-
+        
         Args:
             index (int): The index of the item to be retrieved.
         """
@@ -78,7 +78,7 @@ class SubsampleDatasetWrapper(Dataset):
     def __len__(self):
         """
         Get the length of the dataset after subsampling it.
-
+        
         Returns:
             int: The length of the dataset.
         """

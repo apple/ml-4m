@@ -17,7 +17,7 @@ IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
 IMAGENET_INCEPTION_MEAN = (0.5, 0.5, 0.5)
 IMAGENET_INCEPTION_STD = (0.5, 0.5, 0.5)
 IMAGENET_DPN_MEAN = (124 / 255, 117 / 255, 104 / 255)
-IMAGENET_DPN_STD = tuple([1 / (0.0167 * 255)] * 3)
+IMAGENET_DPN_STD = tuple([1 / (.0167 * 255)] * 3)
 
 IMAGENET_SURFACE_NORMAL_MEAN = (0.501, 0.405, 0.137)
 IMAGENET_SURFACE_NORMAL_STD = (0.114, 0.165, 0.081)
@@ -30,9 +30,9 @@ ADE20K_SEMSEG_NUM_CLASSES = 150 + 1  # One extra class for no-class
 HYPERSIM_SEMSEG_NUM_CLASSES = 41
 
 
-IMAGE_TASKS = {"rgb", "depth", "semseg", "semseg_hypersim", "semseg_coco", "semseg_ade20k", "normal"}
-DETECTION_TASKS = {"det"}  # 'det_coco', 'det_lvis'
-TEXT_TASKS = {"caption"}
+IMAGE_TASKS = {'rgb', 'depth', 'semseg', 'semseg_hypersim', 'semseg_coco', 'semseg_ade20k', 'normal'}
+DETECTION_TASKS = {'det'} # 'det_coco', 'det_lvis'
+TEXT_TASKS = {'caption'}
 VISION_TASKS = IMAGE_TASKS | DETECTION_TASKS
 SEQUENCE_TASKS = DETECTION_TASKS | TEXT_TASKS
 

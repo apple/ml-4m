@@ -38,32 +38,22 @@ except ImportError:
     print("Huggingface datasets not installed. Please install with `pip install datasets`.")
 
 from fourm.data.masking import TransferMasking, UnifiedMasking
-from fourm.data.modality_transforms import (
-    CropSettingsTransform,
-    IdentityTransform,
-    MaskTransform,
-    UnifiedDataTransform,
-    get_transform_key,
-)
+from fourm.data.modality_transforms import (CropSettingsTransform, IdentityTransform,
+                                      MaskTransform, UnifiedDataTransform,
+                                      get_transform_key)
 from fourm.data.multimodal_dataset_folder import MultiModalDatasetFolder
 from fourm.utils.dist import get_rank, get_world_size
 
 
 def build_fm_pretraining_dataset(
-    data_path,
-    all_domains,
-    modality_info,
-    modality_transforms,
-    image_augmenter,
-    text_tokenizer,
-    input_tokens_range,
-    target_tokens_range,
-    sampling_weights=None,
-):
+        data_path, all_domains, modality_info, modality_transforms, 
+        image_augmenter, text_tokenizer, 
+        input_tokens_range, target_tokens_range,
+        sampling_weights=None):
     """Builds the FourM pre-training dataset based on the given arguments.
-    This function should mainly used for smaller datasets (e.g. validation sets),
+    This function should mainly used for smaller datasets (e.g. validation sets), 
     while large training sets should be loaded with build_wds_fm_pretraining_dataloader in webdataset format.
-
+    
     Args:
         data_path: Path to the dataset.
         all_domains: List of all modalities to be used.
@@ -79,18 +69,12 @@ def build_fm_pretraining_dataset(
         FourM pre-training dataset as a PyTorch Dataset.
     """
 
-    transform = transforms.Compose(
-        [
-            UnifiedDataTransform(transforms_dict=modality_transforms, image_augmenter=image_augmenter),
-            UnifiedMasking(
-                modality_info=modality_info,
-                text_tokenizer=text_tokenizer,
-                input_tokens_range=input_tokens_range,
-                target_tokens_range=target_tokens_range,
-                sampling_weights=sampling_weights,
-            ),
-        ]
-    )
+    transform = transforms.Compose([
+        UnifiedDataTransform(transforms_dict=modality_transforms, image_augmenter=image_augmenter),
+        UnifiedMasking(modality_info=modality_info, text_tokenizer=text_tokenizer,
+                       input_tokens_range=input_tokens_range, target_tokens_range=target_tokens_range,
+                       sampling_weights=sampling_weights),
+         ])
 
     # Remove vq domains that require a tokenizer
     modalities_without_vq = [mod for mod in all_domains if not modality_info[mod].get("requires_tokenizer", False)]
@@ -100,32 +84,18 @@ def build_fm_pretraining_dataset(
         modality_transforms = copy.deepcopy(modality_transforms)
         modality_transforms["crop_settings"] = CropSettingsTransform()
 
-    modality_paths = {
-        mod: modality_info[mod]["path"] for mod in modality_info if modality_info[mod].get("path", None) is not None
-    }
-
-    return MultiModalDatasetFolder(
-        root=data_path,
-        modalities=modalities_without_vq,
-        modality_paths=modality_paths,
-        modality_transforms=modality_transforms,
-        transform=transform,
-    )
+    modality_paths = {mod: modality_info[mod]['path'] for mod in modality_info if modality_info[mod].get('path', None) is not None}
+    
+    return MultiModalDatasetFolder(root=data_path, modalities=modalities_without_vq, modality_paths=modality_paths,
+                                   modality_transforms=modality_transforms, transform=transform)
 
 
 def build_fm_transfer_dataset(
-    data_path,
-    modality_info,
-    transform,
-    modality_transforms,
-    all_domains,
-    load_mask_valid: bool = False,
-    max_samples: Optional[int] = None,
-    pre_shuffle: bool = False,
-    cache: bool = False,
-):
+    data_path, modality_info, transform, modality_transforms, all_domains, 
+    load_mask_valid: bool = False, max_samples: Optional[int] = None, 
+    pre_shuffle: bool = False, cache: bool = False):
     """Builds the FourM transfer dataset based on the given arguments.
-
+    
     Args:
         data_path: Path to the dataset.
         modality_info: Dictionary containing information about the modalities.
@@ -154,24 +124,14 @@ def build_fm_transfer_dataset(
         modality_transforms = copy.deepcopy(modality_transforms)
         modality_transforms["mask_valid"] = MaskTransform()
 
-    modality_paths = {
-        mod: modality_info[mod]["path"] for mod in modality_info if modality_info[mod].get("path", None) is not None
-    }
+    modality_paths = {mod: modality_info[mod]['path'] for mod in modality_info if modality_info[mod].get('path', None) is not None}
 
-    return MultiModalDatasetFolder(
-        root=data_path,
-        modalities=modalities_without_vq,
-        modality_paths=modality_paths,
-        modality_transforms=modality_transforms,
-        transform=transform,
-        max_samples=max_samples,
-        pre_shuffle=pre_shuffle,
-        cache=cache,
-    )
+    return MultiModalDatasetFolder(root=data_path, modalities=modalities_without_vq, modality_paths=modality_paths,
+                                   modality_transforms=modality_transforms, transform=transform, max_samples=max_samples, 
+                                   pre_shuffle=pre_shuffle, cache=cache)
 
 
 ### Webdatasets (wds) functions
-
 
 def _keyless_map(data, f, handler=reraise_exception):
     """Map samples without adding __key__."""
@@ -187,21 +147,17 @@ def _keyless_map(data, f, handler=reraise_exception):
             continue
         yield result
 
-
 map = pipelinefilter(_keyless_map)
 
-
 def check_dots(s):
-    if ".gz" in s:
-        return s.count(".") == 2
-    return s.count(".") == 1
-
+    if '.gz' in s:
+        return s.count('.') == 2
+    return s.count('.') == 1
 
 def remove_ext_with_gz(s):
-    if s.endswith(".gz"):
+    if s.endswith('.gz'):
         s = s.replace(".gz", "")
     return os.path.splitext(s)[0]
-
 
 def wds_decoder(key, value):
     if key == "png" or key.endswith(".png"):
@@ -213,23 +169,22 @@ def wds_decoder(key, value):
     elif key == "jpeg" or key.endswith(".jpeg"):
         img = Image.open(io.BytesIO(value))
         return img
-    elif key == "npy" or key.endswith("npy"):
+    elif key == 'npy' or key.endswith("npy"):
         content = np.load(io.BytesIO(value), allow_pickle=True)
         # try:
         #     content = np.load(io.BytesIO(value))
         # except:
         #     content = np.load(io.BytesIO(value), allow_pickle=True)
         return content
-    elif key == "jpx" or key.endswith(".jpx"):
+    elif key == "jpx" or key.endswith('.jpx'):
         img = Image.open(io.BytesIO(value))
         return img
-    elif "output" in key:
+    elif 'output' in key:
         return int(value)
     else:
         # If not an image, use the basic handlers (.txt, .json, .pickle, .npz, ...)
         # See https://github.com/webdataset/webdataset/blob/main/webdataset/autodecode.py
         return None
-
 
 def repeat_fn(src, n_repeats=5):
     """
@@ -240,8 +195,7 @@ def repeat_fn(src, n_repeats=5):
     for sample in src:
         for _ in range(n_repeats):
             yield sample
-
-
+            
 def remove_extensions(sample):
     """
     In webdatasets, we identify the type of a given modality by adding an extension
@@ -250,25 +204,19 @@ def remove_extensions(sample):
     """
     return {remove_ext_with_gz(k): v for k, v in sample.items()}
 
-
-def filter_metadata(sample, metadata=["__key__", "__url__", "file_name", "class_name", "class_idx"]):
-    """Filters out non-modality entries specified in metadata when loading tar files with webdatasets."""
+def filter_metadata(sample, metadata=['__key__', '__url__', 'file_name', 'class_name', 'class_idx']):
+    """ Filters out non-modality entries specified in metadata when loading tar files with webdatasets. """
     return {k: v for k, v in sample.items() if k not in metadata}
 
-
 def apply_modality_transforms(sample, modality_transforms):
-    """Applies a dictionary of modality-specific transforms to a dictionary of modalities."""
-    return {
-        k: (modality_transforms[get_transform_key(k)](v) if k in modality_transforms else v) for k, v in sample.items()
-    }
-
+    """ Applies a dictionary of modality-specific transforms to a dictionary of modalities. """
+    return {k: (modality_transforms[get_transform_key(k)](v) if k in modality_transforms else v) for k, v in sample.items() }
 
 def tok_to_int64(sample):
     """
     Pre-computed tokens are saved as int16, but we need them as int64 instead.
     """
-    return {k: (v.astype("int64") if "tok_" in k else v) for k, v in sample.items()}
-
+    return {k: (v.astype('int64') if 'tok_' in k else v) for k, v in sample.items()}
 
 def rename_modalities(sample, modality_paths):
     """
@@ -276,26 +224,21 @@ def rename_modalities(sample, modality_paths):
     """
     return {out_path: sample[loaded_path] for out_path, loaded_path in modality_paths.items()}
 
-
 def extract_modality_names(s):
     # Regular expression pattern to match anything enclosed in '{' and '}', and comma separated
-    pattern = r"\{([^}]*)\}"
+    pattern = r'\{([^}]*)\}'
     match = re.search(pattern, s)
-    return match.group(1).split(",") if match else []
-
+    return match.group(1).split(',') if match else []
 
 def identity(sample):
-    """Identity function that does nothing."""
+    """ Identity function that does nothing. """
     return sample
 
-
-def multi_tarfile_samples(
-    src_iter: Iterable[Dict[str, Any]],
-    modality_name_map: Dict[str, str] = None,
-    handler: Callable[[Exception], bool] = warn_and_continue,
-):
+def multi_tarfile_samples(src_iter: Iterable[Dict[str, Any]], 
+                          modality_name_map: Dict[str, str] = None, 
+                          handler: Callable[[Exception], bool] = warn_and_continue):
     """Webdataset does not support splitting up shards by modality, so we need to do this manually.
-    Usually, we would need to save all modalities in the same tar file, e.g. shard_root_train/{00000..12345}.tar,
+    Usually, we would need to save all modalities in the same tar file, e.g. shard_root_train/{00000..12345}.tar, 
     where each shard contains 1000 samples and each sample contains all modalities.
     This is not flexible when adding new modalities, so we instead save each modality in a separate tar file,
     e.g. shard_root_train_rgb/{00000..12345}.tar, shard_root_train_caption/{00000..12345}.tar, etc., where each shard contains
@@ -306,7 +249,7 @@ def multi_tarfile_samples(
     and the samples from these two tar files will be combined into a single sample.
 
     Args:
-        src_iter: Iterator over shards that *already brace expanded the shard numbers*,
+        src_iter: Iterator over shards that *already brace expanded the shard numbers*, 
             e.g. {'url': 'shard_root_train_[rgb,caption]/00000.tar'}, {'url': 'shard_root_train_[rgb,caption]/00001.tar'}, ...
             This function will also work when no square braces for multiple modalities are used, e.g. {'url': 'shard_root_train/00000.tar'}, ...
             It can be a drop-in replacement for wds.tarfile_samples.
@@ -317,9 +260,9 @@ def multi_tarfile_samples(
         Dictionary of aligned samples from all modalities.
     """
     for src in src_iter:
-
+        
         # Multi tar file URLs use brace expansion with square braces
-        multi_tar_urls = src["url"].translate(str.maketrans("[]", "{}"))
+        multi_tar_urls = src['url'].translate(str.maketrans('[]', '{}'))
         modality_names = extract_modality_names(multi_tar_urls)
         if len(modality_names) == 0:
             # Case where multi-modal braceexpand is not used, e.g. shard_dir/shard00000.tar
@@ -333,25 +276,23 @@ def multi_tarfile_samples(
             multi_tar_urls = list(braceexpand.braceexpand(multi_tar_urls))
 
         # Create tar iterators for shards of all modalities
-        tar_iters = [wds.tarfile_samples([{"url": tar_url}]) for tar_url in multi_tar_urls]
-
+        tar_iters = [wds.tarfile_samples([{'url': tar_url}]) for tar_url in multi_tar_urls]
+        
         try:
             # Loop over these iterators in parallel and combine the tar files from different modalities
             for multi_tar_files in zip(*tar_iters):
-
+                
                 merged_dict = {}
-                merged_dict["__key__"] = multi_tar_files[0]["__key__"]
-                merged_dict["__url__"] = src["url"]
-
+                merged_dict['__key__'] = multi_tar_files[0]['__key__']
+                merged_dict['__url__'] = src['url']
+                
                 for modality_name, modality_dict in zip(modality_names, multi_tar_files):
-                    _key = modality_dict.pop("__key__")
-                    _url = modality_dict.pop("__url__")
+                    _key = modality_dict.pop('__key__')
+                    _url = modality_dict.pop('__url__')
 
-                    if _key != merged_dict["__key__"]:
-                        raise ValueError(
-                            f"Divergence detected! Trying to merge keys {_key} of {modality_name} and {merged_dict['__key__']} of merged_dict with modalities {merged_dict.keys()}."
-                        )
-
+                    if _key != merged_dict['__key__']:
+                        raise ValueError(f"Divergence detected! Trying to merge keys {_key} of {modality_name} and {merged_dict['__key__']} of merged_dict with modalities {merged_dict.keys()}.")
+                        
                     tar_is_multimodal = len(modality_dict) > 1
                     for k, v in modality_dict.items():
                         if tar_is_multimodal or check_dots(k) or modality_name is None:
@@ -361,12 +302,8 @@ def multi_tarfile_samples(
                             # 3. If the modality name is None, no modality folder was specified (see beginning of function)
                             merged_dict[k] = v
                         else:
-                            mapped_name = (
-                                modality_name
-                                if modality_name_map is None
-                                else modality_name_map.get(modality_name, modality_name)
-                            )
-                            merged_dict[f"{mapped_name}.{k}"] = v
+                            mapped_name = modality_name if modality_name_map is None else modality_name_map.get(modality_name, modality_name)
+                            merged_dict[f'{mapped_name}.{k}'] = v
 
                 yield merged_dict
 
@@ -374,33 +311,18 @@ def multi_tarfile_samples(
             print(e)
             print(f"Exception occurred while processing {src['url']}.")
             if handler(e):
-                print("Skipping shard...")
+                print('Skipping shard...')
                 continue
             else:
                 break
 
-
 def build_wds_fm_pretraining_dataloader(
-    data_path,
-    all_domains,
-    modality_info,
-    modality_transforms,
-    image_augmenter,
-    text_tokenizer,
-    input_tokens_range,
-    target_tokens_range,
-    num_gpus,
-    num_workers,
-    batch_size,
-    epoch_size,
-    sampling_weights=None,
-    modality_name_map=None,
-    shuffle_buffer_load=1000,
-    shuffle_buffer_repeat=5000,
-    n_repeats=5,
-):
+        data_path, all_domains, modality_info, modality_transforms, image_augmenter, 
+        text_tokenizer, input_tokens_range, target_tokens_range,
+        num_gpus, num_workers, batch_size, epoch_size, sampling_weights=None, modality_name_map=None,
+        shuffle_buffer_load=1000, shuffle_buffer_repeat=5000, n_repeats=5):
     """Builds the WebDataset FourM pre-training dataloader based on the given arguments.
-
+    
     Args:
         data_path: Path to the dataset.
         all_domains: List of all modalities to be used.
@@ -424,7 +346,7 @@ def build_wds_fm_pretraining_dataloader(
         FourM pre-training dataloader as a WebDataset DataLoader.
     """
 
-    modality_paths = {mod: modality_info[mod].get("path", None) or mod for mod in modality_info}
+    modality_paths = {mod: modality_info[mod].get('path', None) or mod for mod in modality_info}
 
     # Remove vq domains that require a tokenizer
     modalities_without_vq = [mod for mod in all_domains if not modality_info[mod].get("requires_tokenizer", False)]
@@ -438,51 +360,34 @@ def build_wds_fm_pretraining_dataloader(
     # Webdatasets always adds __key__ to the dictionary, so we add a transform that does nothing with it
     modality_transforms["__key__"] = IdentityTransform()
 
-    transform = transforms.Compose(
-        [
-            UnifiedDataTransform(transforms_dict=modality_transforms, image_augmenter=image_augmenter),
-            UnifiedMasking(
-                modality_info=modality_info,
-                text_tokenizer=text_tokenizer,
-                input_tokens_range=input_tokens_range,
-                target_tokens_range=target_tokens_range,
-                sampling_weights=sampling_weights,
-            ),
-        ]
-    )
-
+    transform = transforms.Compose([
+        UnifiedDataTransform(transforms_dict=modality_transforms, image_augmenter=image_augmenter),
+        UnifiedMasking(modality_info=modality_info, text_tokenizer=text_tokenizer,
+                       input_tokens_range=input_tokens_range, target_tokens_range=target_tokens_range,
+                       sampling_weights=sampling_weights)
+    ])
+    
     datapipe = wds.DataPipeline(
         # Infinitely sample shards from the shard list with replacement. Each worker is seeded independently.
         wds.ResampledShards(data_path),
-        partial(
-            multi_tarfile_samples, modality_name_map=modality_name_map
-        ),  # Extract individual samples from single or multi-modal tar files
-        wds.shuffle(shuffle_buffer_load),  # Shuffle with a buffer of given size
-        wds.decode(wds_decoder),  # Decode from bytes to PIL images, numpy arrays, etc.
-        wds.filters.compose(
-            partial(repeat_fn, n_repeats=n_repeats)
-        ),  # Repeats each sample n times -> A A A B B B C C C ...
-        wds.shuffle(shuffle_buffer_repeat),  # Shuffle again with a buffer of given size
-        wds.map(remove_extensions),  # Remove "file extensions" from dictionary keys
-        map(filter_metadata),  # Remove non-task keys
-        map(tok_to_int64),  # Convert pre-computed tokens to int64
-        map(
-            partial(rename_modalities, modality_paths=modality_paths)
-        ),  # Rename modalities to their corresponding names in modality_paths
-        map(transform),  # Apply data augmentation and masking
-        (
-            wds.batched(batch_size, collation_fn=default_collate, partial=False)
-            if batch_size is not None
-            else map(identity)
-        ),  # Batching
+        partial(multi_tarfile_samples, modality_name_map=modality_name_map), # Extract individual samples from single or multi-modal tar files
+        wds.shuffle(shuffle_buffer_load), # Shuffle with a buffer of given size
+        wds.decode(wds_decoder), # Decode from bytes to PIL images, numpy arrays, etc.
+        wds.filters.compose(partial(repeat_fn, n_repeats=n_repeats)), # Repeats each sample n times -> A A A B B B C C C ...
+        wds.shuffle(shuffle_buffer_repeat), # Shuffle again with a buffer of given size
+        wds.map(remove_extensions), # Remove "file extensions" from dictionary keys
+        map(filter_metadata), # Remove non-task keys
+        map(tok_to_int64), # Convert pre-computed tokens to int64
+        map(partial(rename_modalities, modality_paths=modality_paths)), # Rename modalities to their corresponding names in modality_paths
+        map(transform), # Apply data augmentation and masking
+        wds.batched(batch_size, collation_fn=default_collate, partial=False)
+            if batch_size is not None else map(identity), # Batching
     )
 
     if epoch_size is not None:
         batch_size_iter = batch_size if batch_size is not None else 1
-        datapipe = datapipe.with_epoch(
-            epoch_size // (num_gpus * num_workers * batch_size_iter)
-        )  # Pre-define iterator length
-
+        datapipe = datapipe.with_epoch(epoch_size // (num_gpus * num_workers * batch_size_iter)) # Pre-define iterator length
+    
     if batch_size is not None:
         # Perform multi-threaded dataloading
         return wds.WebLoader(datapipe, num_workers=num_workers, batch_size=None)
@@ -491,20 +396,11 @@ def build_wds_fm_pretraining_dataloader(
 
 
 def build_wds_divae_dataloader(
-    data_path,
-    modality_info,
-    modality_transforms,
-    image_augmenter,
-    num_gpus,
-    num_workers,
-    batch_size,
-    epoch_size,
-    shuffle_buffer_load=1000,
-    shuffle_buffer_repeat=5000,
-    n_repeats=1,
-):
+    data_path, modality_info, modality_transforms, image_augmenter,  
+    num_gpus, num_workers, batch_size, epoch_size, shuffle_buffer_load=1000, 
+    shuffle_buffer_repeat=5000, n_repeats=1):
 
-    modality_paths = {mod: modality_info[mod].get("path", None) or mod for mod in modality_info}
+    modality_paths = {mod: modality_info[mod].get('path', None) or mod for mod in modality_info}
 
     # Webdatasets always adds __key__ to the dictionary, so we add a transform that does nothing with it
     modality_transforms["__key__"] = IdentityTransform()
@@ -514,33 +410,24 @@ def build_wds_divae_dataloader(
     datapipe = wds.DataPipeline(
         # Infinitely sample shards from the shard list with replacement. Each worker is seeded independently.
         wds.ResampledShards(data_path),
-        multi_tarfile_samples,  # Extract individual samples from single or multi-modal tar files
-        wds.shuffle(shuffle_buffer_load),  # Shuffle with a buffer of given size
-        wds.decode(wds_decoder),  # Decode from bytes to PIL images, numpy arrays, etc.
-        wds.filters.compose(
-            partial(repeat_fn, n_repeats=n_repeats)
-        ),  # Repeats each sample n times -> A A A B B B C C C ...
-        wds.shuffle(shuffle_buffer_repeat),  # Shuffle again with a buffer of given size
-        map(remove_extensions),  # Remove "file extensions" from dictionary keys
-        map(filter_metadata),  # Remove non-task keys
-        map(tok_to_int64),  # Convert pre-computed tokens to int64
-        map(
-            partial(rename_modalities, modality_paths=modality_paths)
-        ),  # Rename modalities to their corresponding names in modality_paths
-        map(transform),  # Apply data augmentation and masking
-        (
-            wds.batched(batch_size, collation_fn=default_collate, partial=False)
-            if batch_size is not None
-            else map(identity)
-        ),  # Batching
+        multi_tarfile_samples, # Extract individual samples from single or multi-modal tar files
+        wds.shuffle(shuffle_buffer_load), # Shuffle with a buffer of given size
+        wds.decode(wds_decoder), # Decode from bytes to PIL images, numpy arrays, etc.
+        wds.filters.compose(partial(repeat_fn, n_repeats=n_repeats)), # Repeats each sample n times -> A A A B B B C C C ...
+        wds.shuffle(shuffle_buffer_repeat), # Shuffle again with a buffer of given size
+        map(remove_extensions), # Remove "file extensions" from dictionary keys
+        map(filter_metadata), # Remove non-task keys
+        map(tok_to_int64), # Convert pre-computed tokens to int64
+        map(partial(rename_modalities, modality_paths=modality_paths)), # Rename modalities to their corresponding names in modality_paths
+        map(transform), # Apply data augmentation and masking
+        wds.batched(batch_size, collation_fn=default_collate, partial=False)
+            if batch_size is not None else map(identity), # Batching
     )
 
     if epoch_size is not None:
         batch_size_iter = batch_size if batch_size is not None else 1
-        datapipe = datapipe.with_epoch(
-            epoch_size // (num_gpus * num_workers * batch_size_iter)
-        )  # Pre-define iterator length
-
+        datapipe = datapipe.with_epoch(epoch_size // (num_gpus * num_workers * batch_size_iter)) # Pre-define iterator length
+    
     if batch_size is not None:
         # Perform multi-threaded dataloading
         return wds.WebLoader(datapipe, num_workers=num_workers, batch_size=None)
@@ -550,31 +437,16 @@ def build_wds_divae_dataloader(
 
 ### Huggingface datasets functions
 
-
 def text_to_caption(sample):
-    """Rename "text" to "caption"."""
-    return {"caption": sample["text"]}
+    """ Rename "text" to "caption". """
+    return {'caption': sample['text']}
 
 
 def build_huggingface_pretraining_dataloader(
-    data_path,
-    all_domains,
-    modality_info,
-    modality_transforms,
-    image_augmenter,
-    text_tokenizer,
-    input_tokens_range,
-    target_tokens_range,
-    num_gpus,
-    num_workers,
-    batch_size,
-    epoch_size,
-    split,
-    streaming=True,
-    rename_text_to_caption=True,
-    shuffle_buffer_load=10_000,
-    shuffle_seed=0,
-):
+        data_path, all_domains, modality_info, modality_transforms, image_augmenter, 
+        text_tokenizer, input_tokens_range, target_tokens_range,
+        num_gpus, num_workers, batch_size, epoch_size, split,
+        streaming=True, rename_text_to_caption=True, shuffle_buffer_load=10_000, shuffle_seed=0):
 
     # Load huggingface dataset and split samples across workers. Shuffle samples in each worker
     dataset = load_dataset(data_path, split=split, streaming=streaming)
@@ -582,29 +454,20 @@ def build_huggingface_pretraining_dataloader(
     dataset = dataset.shuffle(seed=shuffle_seed, buffer_size=shuffle_buffer_load)
 
     modality_info = {mod: modality_info[mod] for mod in modality_info if mod in all_domains}
-
-    transform = transforms.Compose(
-        [
-            UnifiedDataTransform(transforms_dict=modality_transforms, image_augmenter=image_augmenter),
-            UnifiedMasking(
-                modality_info=modality_info,
-                text_tokenizer=text_tokenizer,
-                input_tokens_range=input_tokens_range,
-                target_tokens_range=target_tokens_range,
-            ),
-        ]
-    )
-
+    
+    transform = transforms.Compose([
+        UnifiedDataTransform(transforms_dict=modality_transforms, image_augmenter=image_augmenter),
+        UnifiedMasking(modality_info=modality_info, text_tokenizer=text_tokenizer,
+                       input_tokens_range=input_tokens_range, target_tokens_range=target_tokens_range)
+    ])
+    
     datapipe = wds.DataPipeline(
         dataset,
-        map(text_to_caption) if rename_text_to_caption else map(identity),  # Rename "text" to "caption"
-        map(filter_metadata),  # Remove non-task keys
-        map(transform),  # Apply data augmentation and masking
-        (
-            wds.batched(batch_size, collation_fn=default_collate, partial=False)
-            if batch_size is not None
-            else map(identity)
-        ),  # Batching
+        map(text_to_caption) if rename_text_to_caption else map(identity), # Rename "text" to "caption"
+        map(filter_metadata), # Remove non-task keys
+        map(transform), # Apply data augmentation and masking
+        wds.batched(batch_size, collation_fn=default_collate, partial=False)
+            if batch_size is not None else map(identity), # Batching
     )
 
     datapipe.n_shards = dataset.n_shards
@@ -612,9 +475,7 @@ def build_huggingface_pretraining_dataloader(
 
     if epoch_size is not None:
         batch_size_iter = batch_size if batch_size is not None else 1
-        datapipe = datapipe.with_epoch(
-            epoch_size // (num_gpus * num_workers * batch_size_iter)
-        )  # Pre-define iterator length
+        datapipe = datapipe.with_epoch(epoch_size // (num_gpus * num_workers * batch_size_iter)) # Pre-define iterator length
 
     if batch_size is not None:
         # Perform multi-threaded dataloading
@@ -631,34 +492,32 @@ def make_empty_mod_dict(modality_info):
         empty_mod = {}
 
         # Tensor
-        if "num_channels" in mod_info and "input_size" in mod_info:
+        if 'num_channels' in mod_info and 'input_size' in mod_info:
             # Handle image-like modalities
-            max_tokens = mod_info["max_tokens"]
-            empty_mod["tensor"] = torch.zeros(
-                (mod_info["num_channels"], mod_info["input_size"], mod_info["input_size"]), dtype=torch.float32
-            )
-        elif mod_name == "t5_caption":
+            max_tokens = mod_info['max_tokens']
+            empty_mod['tensor'] = torch.zeros((mod_info['num_channels'], mod_info['input_size'], mod_info['input_size']), dtype=torch.float32)
+        elif mod_name == 't5_caption':
             # Handle T5 embedding
-            max_tokens = mod_info["max_tokens"]
-            orig_emb_dim = mod_info["encoder_embedding"]().orig_emb_dim
-            empty_mod["tensor"] = torch.zeros((max_tokens, orig_emb_dim), dtype=torch.float32)
-        elif mod_info["type"] in ["seq", "seq_emb", "seq_token"]:
+            max_tokens = mod_info['max_tokens']
+            orig_emb_dim = mod_info['encoder_embedding']().orig_emb_dim
+            empty_mod['tensor'] = torch.zeros((max_tokens, orig_emb_dim), dtype=torch.float32)
+        elif mod_info['type'] in ['seq', 'seq_emb', 'seq_token']:
             # Handle all other discrete sequence modalities
-            max_tokens = (mod_info["max_tokens"] + 1) * 2
-            empty_mod["tensor"] = torch.zeros((max_tokens), dtype=torch.int32)
+            max_tokens = (mod_info['max_tokens'] + 1) * 2
+            empty_mod['tensor'] = torch.zeros((max_tokens), dtype=torch.int32)
         else:
-            max_tokens = mod_info["max_tokens"]
-            empty_mod["tensor"] = torch.zeros((max_tokens), dtype=torch.int32)
-
+            max_tokens = mod_info['max_tokens']
+            empty_mod['tensor'] = torch.zeros((max_tokens), dtype=torch.int32)
+            
         # Input and target masks
-        empty_mod["input_mask"] = torch.ones((max_tokens), dtype=torch.bool)
-        empty_mod["target_mask"] = torch.ones((max_tokens), dtype=torch.bool)
+        empty_mod['input_mask'] = torch.ones((max_tokens), dtype=torch.bool)
+        empty_mod['target_mask'] = torch.ones((max_tokens), dtype=torch.bool)
 
         # Decoder attention mask
-        empty_mod["decoder_attention_mask"] = torch.zeros((max_tokens), dtype=torch.int32)
-
+        empty_mod['decoder_attention_mask'] = torch.zeros((max_tokens), dtype=torch.int32)
+        
         empty_mod_dicts[mod_name] = empty_mod
-
+        
     return empty_mod_dicts
 
 
@@ -670,7 +529,7 @@ class MixtureDataset(IterableDataset):
         self.modality_info = modality_info
 
     def reset_iterator(self, idx):
-        """Reset the iterator when exhausted."""
+        """ Reset the iterator when exhausted. """
         self.data_iters[idx] = iter(self.orig_data_iters[idx])
 
     def __iter__(self):
@@ -691,10 +550,8 @@ def build_mixture_dataloader(data_iters, weights, modality_info, batch_size, num
     mixture_pipe = wds.DataPipeline(
         MixtureDataset(data_iters, weights, modality_info),
         wds.batched(batch_size, collation_fn=default_collate, partial=False),
-    ).with_epoch(
-        epoch_size // (num_gpus * num_workers * batch_size)
-    )  # Pre-define iterator length
-
+    ).with_epoch(epoch_size // (num_gpus * num_workers * batch_size)) # Pre-define iterator length
+    
     mixture_loader = wds.WebLoader(mixture_pipe, num_workers=num_workers, batch_size=None)
-
+    
     return mixture_loader

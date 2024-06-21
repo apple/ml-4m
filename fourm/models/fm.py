@@ -32,22 +32,23 @@ from fourm.data.modality_info import MODALITY_INFO
 # Model definitions
 __all__ = [
     # GELU models
-    "fm_tiny_6e_6d_gelu",
-    "fm_small_8e_8d_gelu",
-    "fm_base_12e_12d_gelu",
-    "fm_large_24e_24d_gelu",
-    "fm_xlarge_24e_24d_gelu",
+    'fm_tiny_6e_6d_gelu',
+    'fm_small_8e_8d_gelu',
+    'fm_base_12e_12d_gelu',
+    'fm_large_24e_24d_gelu',
+    'fm_xlarge_24e_24d_gelu',
     # SwiGLU models
-    "fm_tiny_6e_6d_swiglu_nobias",
-    "fm_small_8e_8d_swiglu_nobias",
-    "fm_base_12e_12d_swiglu_nobias",
-    "fm_large_24e_24d_swiglu_nobias",
-    "fm_xlarge_24e_24d_swiglu_nobias",
+    'fm_tiny_6e_6d_swiglu_nobias',
+    'fm_small_8e_8d_swiglu_nobias',
+    'fm_base_12e_12d_swiglu_nobias',
+    'fm_large_24e_24d_swiglu_nobias',
+    'fm_xlarge_24e_24d_swiglu_nobias',
     # SwiGLU + QKNorm models
-    "fm_base_12e_12d_swiglu_qknorm_nobias",
-    "fm_large_24e_24d_swiglu_qknorm_nobias",
-    "fm_xlarge_24e_24d_swiglu_qknorm_nobias",
+    'fm_base_12e_12d_swiglu_qknorm_nobias',
+    'fm_large_24e_24d_swiglu_qknorm_nobias',
+    'fm_xlarge_24e_24d_swiglu_qknorm_nobias',
 ]
+
 
 
 class FourM(nn.Module):
@@ -77,33 +78,31 @@ class FourM(nn.Module):
         num_register_tokens: Number of register tokens.
         use_act_checkpoint: If True, use activation checkpoint for each block.
     """
-
-    def __init__(
-        self,
-        encoder_embeddings: Dict[str, nn.Module],
-        decoder_embeddings: Dict[str, nn.Module],
-        modality_info: Dict[str, Any],
-        dim: int = 768,
-        encoder_depth: int = 12,
-        decoder_depth: int = 12,
-        num_heads: int = 12,
-        mlp_ratio: float = 4.0,
-        qkv_bias: bool = True,
-        proj_bias: bool = True,
-        mlp_bias: bool = True,
-        drop_path_rate_encoder: float = 0.0,
-        drop_path_rate_decoder: float = 0.0,
-        shared_drop_path: bool = False,
-        act_layer: nn.Module = nn.GELU,
-        norm_layer: Union[partial, nn.Module] = partial(LayerNorm, eps=1e-6),
-        gated_mlp: bool = False,  # Make the feedforward gated for e.g. SwiGLU
-        qk_norm: bool = False,
-        decoder_causal_mask: bool = False,
-        decoder_sep_mask: bool = True,
-        num_register_tokens: int = 0,
-        use_act_checkpoint: bool = False,
-        share_modality_embeddings: bool = True,
-    ):
+    def __init__(self,
+                 encoder_embeddings: Dict[str, nn.Module],
+                 decoder_embeddings: Dict[str, nn.Module],
+                 modality_info: Dict[str, Any],
+                 dim: int = 768,
+                 encoder_depth: int = 12,
+                 decoder_depth: int = 12,
+                 num_heads: int = 12,
+                 mlp_ratio: float = 4.0,
+                 qkv_bias: bool = True,
+                 proj_bias: bool = True,
+                 mlp_bias: bool = True,
+                 drop_path_rate_encoder: float = 0.0,
+                 drop_path_rate_decoder: float = 0.0,
+                 shared_drop_path: bool = False,
+                 act_layer: nn.Module = nn.GELU,
+                 norm_layer: Union[partial, nn.Module] = partial(LayerNorm, eps=1e-6),
+                 gated_mlp: bool = False, # Make the feedforward gated for e.g. SwiGLU
+                 qk_norm: bool = False,
+                 decoder_causal_mask: bool = False,
+                 decoder_sep_mask: bool = True,
+                 num_register_tokens: int = 0,
+                 use_act_checkpoint: bool = False,
+                 share_modality_embeddings: bool = True,
+                 ):
         super().__init__()
 
         self.modality_info = modality_info
@@ -113,6 +112,7 @@ class FourM(nn.Module):
         self.init_std = 0.02
         self.use_act_checkpoint = use_act_checkpoint
         self.num_register_tokens = num_register_tokens
+
 
         # Encoder embeddings & init
         self.encoder_modalities = set(encoder_embeddings.keys())
@@ -132,65 +132,32 @@ class FourM(nn.Module):
 
         ## Transformer encoder
         if shared_drop_path:
-            dpr_encoder = [x.item() for x in torch.linspace(0, drop_path_rate_encoder, encoder_depth + decoder_depth)][
-                :encoder_depth
-            ]
+            dpr_encoder = [x.item() for x in torch.linspace(0, drop_path_rate_encoder, encoder_depth + decoder_depth)][:encoder_depth]
         else:
-            dpr_encoder = [
-                x.item() for x in torch.linspace(0, drop_path_rate_encoder, encoder_depth)
-            ]  # stochastic depth decay rule
+            dpr_encoder = [x.item() for x in torch.linspace(0, drop_path_rate_encoder, encoder_depth)] # stochastic depth decay rule
 
-        self.encoder = nn.ModuleList(
-            [
-                Block(
-                    dim=dim,
-                    num_heads=num_heads,
-                    mlp_ratio=mlp_ratio,
-                    qkv_bias=qkv_bias,
-                    proj_bias=proj_bias,
-                    mlp_bias=mlp_bias,
-                    drop_path=dpr_encoder[i],
-                    act_layer=act_layer,
-                    norm_layer=norm_layer,
-                    gated_mlp=gated_mlp,
-                    qk_norm=qk_norm,
-                )
-                for i in range(encoder_depth)
-            ]
-        )
+        self.encoder = nn.ModuleList([
+            Block(dim=dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, proj_bias=proj_bias, mlp_bias=mlp_bias,
+                 drop_path=dpr_encoder[i], act_layer=act_layer, norm_layer=norm_layer, gated_mlp=gated_mlp, qk_norm=qk_norm)
+            for i in range(encoder_depth)
+        ])
         self.encoder_norm = norm_layer(dim)
+
 
         ## Transformer decoder
         if shared_drop_path:
-            dpr_decoder = [x.item() for x in torch.linspace(0, drop_path_rate_decoder, encoder_depth + decoder_depth)][
-                encoder_depth:
-            ]
+            dpr_decoder = [x.item() for x in torch.linspace(0, drop_path_rate_decoder, encoder_depth + decoder_depth)][encoder_depth:]
         else:
-            dpr_decoder = [
-                x.item() for x in torch.linspace(0, drop_path_rate_decoder, decoder_depth)
-            ]  # stochastic depth decay rule
+            dpr_decoder = [x.item() for x in torch.linspace(0, drop_path_rate_decoder, decoder_depth)]  # stochastic depth decay rule
 
         # Projection of encoder tokens before adding the embeddings again
         self.decoder_proj_context = nn.Linear(dim, dim)
 
-        self.decoder = nn.ModuleList(
-            [
-                DecoderBlock(
-                    dim=dim,
-                    num_heads=num_heads,
-                    mlp_ratio=mlp_ratio,
-                    qkv_bias=qkv_bias,
-                    proj_bias=proj_bias,
-                    mlp_bias=mlp_bias,
-                    drop_path=dpr_decoder[i],
-                    act_layer=act_layer,
-                    norm_layer=norm_layer,
-                    gated_mlp=gated_mlp,
-                    qk_norm=qk_norm,
-                )
-                for i in range(decoder_depth)
-            ]
-        )
+        self.decoder = nn.ModuleList([
+            DecoderBlock(dim=dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, proj_bias=proj_bias, mlp_bias=mlp_bias, 
+                         drop_path=dpr_decoder[i], act_layer=act_layer, norm_layer=norm_layer, gated_mlp=gated_mlp, qk_norm=qk_norm)
+            for i in range(decoder_depth)
+        ])
         self.decoder_norm = norm_layer(dim)
 
         self.mask_token = nn.Parameter(torch.zeros(1, 1, dim))
@@ -221,13 +188,13 @@ class FourM(nn.Module):
                 continue
             # Linear
             elif isinstance(m, nn.Linear):
-                if "qkv" in name:
+                if 'qkv' in name:
                     # treat the weights of Q, K, V separately
-                    val = math.sqrt(6.0 / float(m.weight.shape[0] // 3 + m.weight.shape[1]))
+                    val = math.sqrt(6. / float(m.weight.shape[0] // 3 + m.weight.shape[1]))
                     nn.init.uniform_(m.weight, -val, val)
-                elif "kv" in name:
+                elif 'kv' in name:
                     # treat the weights of K, V separately
-                    val = math.sqrt(6.0 / float(m.weight.shape[0] // 2 + m.weight.shape[1]))
+                    val = math.sqrt(6. / float(m.weight.shape[0] // 2 + m.weight.shape[1]))
                     nn.init.uniform_(m.weight, -val, val)
                 else:
                     nn.init.xavier_uniform_(m.weight)
@@ -243,7 +210,7 @@ class FourM(nn.Module):
                 nn.init.normal_(m.weight, std=self.init_std)
             # Conv2d
             elif isinstance(m, nn.Conv2d):
-                if ".proj" in name:
+                if '.proj' in name:
                     # From MAE, initialize projection like nn.Linear (instead of nn.Conv2d)
                     w = m.weight.data
                     nn.init.xavier_uniform_(w.view([w.shape[0], -1]))
@@ -262,15 +229,15 @@ class FourM(nn.Module):
         no_wd_set = set()
 
         for mod, emb_module in self.encoder_embeddings.items():
-            if hasattr(emb_module, "no_weight_decay"):
+            if hasattr(emb_module, 'no_weight_decay'):
                 to_skip = emb_module.no_weight_decay()
-                to_skip = set([f"encoder_embeddings.{mod}.{name}" for name in to_skip])
+                to_skip = set([f'encoder_embeddings.{mod}.{name}' for name in to_skip])
                 no_wd_set = no_wd_set | to_skip
 
         for mod, emb_module in self.decoder_embeddings.items():
-            if hasattr(emb_module, "no_weight_decay"):
+            if hasattr(emb_module, 'no_weight_decay'):
                 to_skip = emb_module.no_weight_decay()
-                to_skip = set([f"decoder_embeddings.{mod}.{name}" for name in to_skip])
+                to_skip = set([f'decoder_embeddings.{mod}.{name}' for name in to_skip])
                 no_wd_set = no_wd_set | to_skip
 
         return no_wd_set
@@ -279,8 +246,8 @@ class FourM(nn.Module):
         """Concatenate encoder tensors from different modalities.
 
         Args:
-            mod_dict (dict): A dictionary containing information for each modality.
-                             Expected keys for each modality are 'x' (input tokens),
+            mod_dict (dict): A dictionary containing information for each modality. 
+                             Expected keys for each modality are 'x' (input tokens), 
                              'emb' (embeddings), 'input_mask', etc.
 
         Returns:
@@ -297,10 +264,10 @@ class FourM(nn.Module):
         mod_mask_all = []
 
         for mod, d in mod_dict.items():
-            encoder_tokens_all.append(d["x"])
-            emb_all.append(d["emb"])
-            encoder_mask_all.append(d["input_mask"])
-            mod_mask_all.append(torch.full_like(d["input_mask"], self.modality_info[mod]["id"], dtype=torch.int16))
+            encoder_tokens_all.append(d['x'])
+            emb_all.append(d['emb'])
+            encoder_mask_all.append(d['input_mask'])
+            mod_mask_all.append(torch.full_like(d['input_mask'], self.modality_info[mod]['id'], dtype=torch.int16))
 
         encoder_tokens_all = torch.cat(encoder_tokens_all, dim=1)
         emb_all = torch.cat(emb_all, dim=1)
@@ -311,13 +278,13 @@ class FourM(nn.Module):
 
     def cat_decoder_tensors(self, mod_dict: Dict[str, Dict[str, torch.Tensor]]) -> Tuple[torch.Tensor]:
         """Concatenate decoder tensors from different modalities.
-
+        
         Args:
             mod_dict (dict): A dictionary containing information for each modality.
                              Expected keys for each modality include 'x' (input tokens),
                              'ids' (target IDs), 'emb' (embeddings), 'target_mask', 'decoder_attention_mask', etc.
 
-
+        
         Returns:
             tuple:
                 - decoder_tokens_all (torch.Tensor): Concatenated decoder tokens from all modalities. Shape (B, P, D) where P is the total number of all decoder tokens.
@@ -339,25 +306,25 @@ class FourM(nn.Module):
         mod_dict = {mod: d for mod, d in random.sample(mod_dict.items(), len(mod_dict))}
 
         for mod, d in mod_dict.items():
-            if self.modality_info[mod]["type"] in ["seq", "seq_emb", "seq_token"]:
+            if self.modality_info[mod]['type'] in ['seq', 'seq_emb', 'seq_token']:
                 # Important: This makes the assumption that the target sequence appears sequentially
                 # before sorting / gathering
-                decoder_tokens_all.append(d["x"][:, :-1])
-                target_ids_all.append(d["ids"][:, 1:])  # Shifted left
-                emb_all.append(d["emb"][:, :-1])
+                decoder_tokens_all.append(d['x'][:, :-1])
+                target_ids_all.append(d['ids'][:, 1:])  # Shifted left
+                emb_all.append(d['emb'][:, :-1])
                 # Logical or with left shifting removes the last unmasked position
-                decoder_mask_all.append(torch.logical_or(d["target_mask"][:, 1:], d["target_mask"][:, :-1]))
+                decoder_mask_all.append(torch.logical_or(d['target_mask'][:, 1:], d['target_mask'][:, :-1]))
                 # Add attention mask ids
-                attention_mask_all.append(d["decoder_attention_mask"][:, :-1])
-                mod_mask_all.append(torch.full_like(d["ids"][:, :-1], self.modality_info[mod]["id"], dtype=torch.int16))
+                attention_mask_all.append(d['decoder_attention_mask'][:, :-1])
+                mod_mask_all.append(torch.full_like(d['ids'][:, :-1], self.modality_info[mod]['id'], dtype=torch.int16))
             else:
                 # Important: For 2d / image modalities, the decoder input tokens are replaced by the mask token
-                decoder_tokens_all.append(torch.zeros_like(d["x"]) + self.mask_token)  # Replace x by mask token
-                target_ids_all.append(d["ids"])
-                emb_all.append(d["emb"])
-                decoder_mask_all.append(d["target_mask"])
-                attention_mask_all.append(d["decoder_attention_mask"])
-                mod_mask_all.append(torch.full_like(d["ids"], self.modality_info[mod]["id"], dtype=torch.int16))
+                decoder_tokens_all.append(torch.zeros_like(d['x']) + self.mask_token)  # Replace x by mask token
+                target_ids_all.append(d['ids'])
+                emb_all.append(d['emb'])
+                decoder_mask_all.append(d['target_mask'])
+                attention_mask_all.append(d['decoder_attention_mask'])
+                mod_mask_all.append(torch.full_like(d['ids'], self.modality_info[mod]['id'], dtype=torch.int16))
 
         decoder_tokens_all = torch.cat(decoder_tokens_all, dim=1)
         emb_all = torch.cat(emb_all, dim=1)
@@ -368,22 +335,20 @@ class FourM(nn.Module):
 
         return decoder_tokens_all, emb_all, decoder_mask_all, target_ids_all, attention_mask_all, mod_mask_all
 
-    def forward_mask_encoder(
-        self, mod_dict: Dict[str, Dict[str, torch.Tensor]], num_encoder_tokens: int
-    ) -> Tuple[torch.Tensor]:
+    def forward_mask_encoder(self, mod_dict: Dict[str, Dict[str, torch.Tensor]], num_encoder_tokens: int) -> Tuple[torch.Tensor]:
         """Concatenates and mask encoder tensors based on provided modality information.
 
         This function consolidates encoder tokens from multiple modalities, then selects a specified number of them based on modality information (i.e. masking).
 
         Args:
-            mod_dict (dict): Dictionary containing tensors for different modalities.
-                            It is expected to have keys for each modality and values
+            mod_dict (dict): Dictionary containing tensors for different modalities. 
+                            It is expected to have keys for each modality and values 
                             containing the modalities' associated tensors.
             num_encoder_tokens (int): Number of encoder tokens to retain after masking.
 
         Returns:
             tuple:
-                - encoder_tokens (torch.Tensor): Selected encoder tokens from all modalities. Shape (B, N, D) where N is the number of selected encoder tokens.
+                - encoder_tokens (torch.Tensor): Selected encoder tokens from all modalities. Shape (B, N, D) where N is the number of selected encoder tokens. 
                 - encoder_emb (torch.Tensor): Corresponding embeddings for encoder tokens. Shape (B, N, D)
                 - encoder_mask (torch.Tensor): A boolean mask indicating which encoder tokens are valid (set to 0 for valid tokens, 1 otherwise). Shape (B, 1, N)
                 - mod_mask (torch.Tensor): An integer mask marking the modality type for each encoder token (with -1 indicating unassigned pad tokens). Shape (B, N)
@@ -391,7 +356,7 @@ class FourM(nn.Module):
         Notes:
             - If `num_register_tokens` is set and greater than 0, register tokens are added at the beginning of the sequence.
         """
-        B = list(mod_dict.values())[0]["tensor"].shape[0]
+        B = list(mod_dict.values())[0]['tensor'].shape[0]
 
         encoder_tokens_all, emb_all, encoder_mask_all, mod_mask_all = self.cat_encoder_tensors(mod_dict)
 
@@ -401,49 +366,37 @@ class FourM(nn.Module):
         # ids_restore = torch.argsort(ids_shuffle, dim=1)
         ids_keep = ids_shuffle[:, :num_encoder_tokens]
 
-        encoder_tokens = torch.gather(
-            encoder_tokens_all, dim=1, index=repeat(ids_keep, "b n -> b n d", d=encoder_tokens_all.shape[2])
-        )
+        encoder_tokens = torch.gather(encoder_tokens_all, dim=1,
+                                      index=repeat(ids_keep, "b n -> b n d", d=encoder_tokens_all.shape[2]))
         encoder_emb = torch.gather(emb_all, dim=1, index=repeat(ids_keep, "b n -> b n d", d=emb_all.shape[2]))
         encoder_mask = torch.gather(encoder_mask_all, dim=1, index=ids_keep)
         mod_mask = torch.gather(mod_mask_all, dim=1, index=ids_keep)
 
         if self.num_register_tokens > 0:
-            register_tokens = repeat(self.register_tokens, "() n d -> b n d", b=B)
+            register_tokens = repeat(self.register_tokens, '() n d -> b n d', b=B)
             # We add register tokens at the beginning of the sequence
             encoder_tokens = torch.cat([register_tokens, encoder_tokens], dim=1)
             encoder_emb = torch.cat([torch.zeros_like(register_tokens), encoder_emb], dim=1)
-            encoder_mask = torch.cat(
-                [
-                    torch.zeros((B, register_tokens.shape[1]), dtype=torch.bool, device=encoder_mask.device),
-                    encoder_mask,
-                ],
-                dim=1,
-            )
-            mod_mask = torch.cat(
-                [torch.full((B, register_tokens.shape[1]), -1, dtype=torch.int16, device=mod_mask.device), mod_mask],
-                dim=1,
-            )
+            encoder_mask = torch.cat([torch.zeros((B, register_tokens.shape[1]), dtype=torch.bool, device=encoder_mask.device), encoder_mask], dim=1)
+            mod_mask = torch.cat([torch.full((B, register_tokens.shape[1]), -1, dtype=torch.int16, device=mod_mask.device), mod_mask], dim=1)
 
-        encoder_tokens[encoder_mask] = 0.0
-        encoder_emb[encoder_mask] = 0.0
+        encoder_tokens[encoder_mask] = 0.
+        encoder_emb[encoder_mask] = 0.
         mod_mask[encoder_mask] = -1
         # Mask could be of shape 'b n1 n2' but not needed for masked_fill
         # This means this mask can then be re-used for decoder cross-attention
-        encoder_mask = rearrange(encoder_mask, "b n2 -> b 1 n2")
+        encoder_mask = rearrange(encoder_mask, 'b n2 -> b 1 n2')
 
         return encoder_tokens, encoder_emb, encoder_mask, mod_mask
 
-    def forward_mask_decoder(
-        self, mod_dict: Dict[str, Dict[str, torch.Tensor]], num_decoder_tokens: int
-    ) -> Tuple[torch.Tensor]:
+    def forward_mask_decoder(self, mod_dict: Dict[str, Dict[str, torch.Tensor]], num_decoder_tokens: int) -> Tuple[torch.Tensor]:
         """Concatenates and mask decoder tensors based on provided modality information.
 
         This function consolidates decoder tokens from multiple modalities, selects a specified number of them based on modality information, and applies appropriate masking.
 
         Args:
             mod_dict (dict): Dictionary containing tensors for different modalities.
-                            It is expected to have keys for each modality and values
+                            It is expected to have keys for each modality and values 
                             containing the modalities' associated tensors.
             num_decoder_tokens (int): Number of decoder tokens to retain after masking.
 
@@ -457,14 +410,7 @@ class FourM(nn.Module):
                 - mod_mask (torch.Tensor): An integer mask marking the modality type for each decoder token (with -1 indicating unassigned pad tokens). Shape (B, M)
         """
         # decoder_mask and target_mask are equivalent, we rename it here to harmonize with forward_mask_encoder
-        (
-            decoder_tokens_all,
-            emb_all,
-            decoder_mask_all,
-            target_ids_all,
-            decoder_attention_mask_all,
-            mod_mask_all,
-        ) = self.cat_decoder_tensors(mod_dict)
+        decoder_tokens_all, emb_all, decoder_mask_all, target_ids_all, decoder_attention_mask_all, mod_mask_all = self.cat_decoder_tensors(mod_dict)
 
         # Add arange multiplied by small constant to mask so they get sorted in a deterministic way
         mask_arange = torch.arange(decoder_mask_all.shape[1], device=decoder_mask_all.device).unsqueeze(0) * 1e-6
@@ -472,29 +418,26 @@ class FourM(nn.Module):
         # ids_restore = torch.argsort(ids_shuffle, dim=1)
         ids_keep = ids_shuffle[:, :num_decoder_tokens]
 
-        decoder_tokens = torch.gather(
-            decoder_tokens_all, dim=1, index=repeat(ids_keep, "b n -> b n d", d=decoder_tokens_all.shape[2])
-        )
+        decoder_tokens = torch.gather(decoder_tokens_all, dim=1, index=repeat(ids_keep, "b n -> b n d", d=decoder_tokens_all.shape[2]))
         decoder_emb = torch.gather(emb_all, dim=1, index=repeat(ids_keep, "b n -> b n d", d=emb_all.shape[2]))
         decoder_mask = torch.gather(decoder_mask_all, dim=1, index=ids_keep)
         target_ids = torch.gather(target_ids_all, dim=1, index=ids_keep)
         decoder_attention_mask = torch.gather(decoder_attention_mask_all, dim=1, index=ids_keep)
         mod_mask = torch.gather(mod_mask_all, dim=1, index=ids_keep)
 
-        decoder_tokens[decoder_mask] = 0.0
-        decoder_emb[decoder_mask] = 0.0
+        decoder_tokens[decoder_mask] = 0.
+        decoder_emb[decoder_mask] = 0.
         target_ids[decoder_mask] = 0
         decoder_attention_mask = self.adapt_decoder_attention_mask(decoder_attention_mask, mod_mask)
         mod_mask[decoder_mask] = -1
 
         # This means this mask can then be re-used for decoder cross-attention
-        decoder_mask = rearrange(decoder_mask, "b n2 -> b 1 n2")
+        decoder_mask = rearrange(decoder_mask, 'b n2 -> b 1 n2')
+
 
         return decoder_tokens, decoder_emb, decoder_mask, target_ids, decoder_attention_mask, mod_mask
 
-    def adapt_decoder_attention_mask(
-        self, decoder_attention_mask: torch.Tensor, mod_mask=Optional[torch.Tensor]
-    ) -> torch.Tensor:
+    def adapt_decoder_attention_mask(self, decoder_attention_mask: torch.Tensor, mod_mask=Optional[torch.Tensor]) -> torch.Tensor:
         """
         Transforms the compressed decoder attention mask to a full attention mask based on the specified constraints.
 
@@ -522,7 +465,7 @@ class FourM(nn.Module):
             attention_arange = repeat(attention_arange, "n2 -> b n1 n2", b=B, n1=N)
             cumsum_mask = torch.cumsum(decoder_attention_mask, dim=-1)
             cumsum_mask = rearrange(cumsum_mask, "b n -> b n 1")
-            adapted_attention_mask = attention_arange >= cumsum_mask
+            adapted_attention_mask = (attention_arange >= cumsum_mask)
 
         if self.decoder_sep_mask:
             # Separate attention between tokens based on their modality using mod_mask.
@@ -531,27 +474,31 @@ class FourM(nn.Module):
 
         return adapted_attention_mask
 
-    def forward_encoder(self, x: torch.Tensor, encoder_mask: torch.Tensor) -> torch.Tensor:
+    def forward_encoder(self, 
+                        x: torch.Tensor, 
+                        encoder_mask: torch.Tensor) -> torch.Tensor:
         """Forward pass for the encoder.
-
+        
         Args:
             x (torch.Tensor): Encoder input tokens. Shape (B, N, D) where N is the number of encoder tokens.
             encoder_mask (torch.Tensor): Encoder mask indicating which tokens are valid (set to 0 for valid tokens, 1 otherwise). Shape (B, 1, N)
-
+            
         Returns:
             torch.Tensor: Encoder output. Shape (B, N, D)
         """
 
         for blk in self.encoder:
             x = blk(x, mask=encoder_mask)
-
+            
         x = self.encoder_norm(x)
 
         return x
 
-    def forward_decoder(
-        self, y: torch.Tensor, context: torch.Tensor, encoder_mask: torch.Tensor, decoder_attention_mask: torch.Tensor
-    ) -> torch.Tensor:
+    def forward_decoder(self, 
+                        y: torch.Tensor, 
+                        context: torch.Tensor, 
+                        encoder_mask: torch.Tensor, 
+                        decoder_attention_mask: torch.Tensor) -> torch.Tensor:
         """Forward pass for the decoder.
 
         Args:
@@ -571,13 +518,11 @@ class FourM(nn.Module):
 
         return y
 
-    def forward_logits(
-        self,
-        y: torch.Tensor,
-        decoder_mod_dict: Dict[str, Dict[str, torch.Tensor]],
-        decoder_mod_mask: torch.Tensor,
-        return_all_logits: bool = False,
-    ) -> Dict[str, torch.Tensor]:
+    def forward_logits(self, 
+                       y: torch.Tensor, 
+                       decoder_mod_dict: Dict[str, Dict[str, torch.Tensor]], 
+                       decoder_mod_mask: torch.Tensor,
+                       return_all_logits: bool = False) -> Dict[str, torch.Tensor]:
         """Forward computation of logits for each modality.
 
         Args:
@@ -599,14 +544,11 @@ class FourM(nn.Module):
             mod_logits[mod] = logits
         return mod_logits
 
-    def forward_loss(
-        self,
-        y: torch.Tensor,
-        target_ids: torch.Tensor,
-        decoder_mod_dict: Dict[str, Any],
-        decoder_mod_mask: torch.Tensor,
-        loss_type: str,
-    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    def forward_loss(self, 
+                     y: torch.Tensor, 
+                     target_ids: torch.Tensor, 
+                     decoder_mod_dict: Dict[str, Any], 
+                     decoder_mod_mask: torch.Tensor, loss_type: str) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """Computes the loss based on the specified loss type.
 
         Args:
@@ -619,22 +561,20 @@ class FourM(nn.Module):
         Returns:
             Tuple[torch.Tensor, Dict[str, torch.Tensor]]: Total loss and dictionary of loss for each modality.
         """
-        if loss_type in ["mod", "modality"]:
+        if loss_type in ['mod', 'modality']:
             loss, mod_loss = self.forward_mod_loss(y, target_ids, decoder_mod_dict, decoder_mod_mask)
-        elif loss_type == "token":
+        elif loss_type == 'token':
             loss, mod_loss = self.forward_token_loss(y, target_ids, decoder_mod_dict, decoder_mod_mask)
         else:
             raise ValueError("Invalid loss type")
 
         return loss, mod_loss
 
-    def forward_mod_loss(
-        self,
-        y: torch.Tensor,
-        target_ids: torch.Tensor,
-        decoder_mod_dict: Dict[str, Any],
-        decoder_mod_mask: torch.Tensor,
-    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    def forward_mod_loss(self, 
+                         y: torch.Tensor, 
+                         target_ids: torch.Tensor, 
+                         decoder_mod_dict: Dict[str, Any], 
+                         decoder_mod_mask: torch.Tensor) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """Computes the modality-wise loss.
 
         Args:
@@ -645,7 +585,7 @@ class FourM(nn.Module):
 
         Returns:
             Tuple[torch.Tensor, Dict[str, torch.Tensor]]: Total modality loss and dictionary of loss for each modality.
-        """
+        """       
         mod_loss = {}
         for mod, d in decoder_mod_dict.items():
             idx = self.modality_info[mod]["id"]
@@ -654,20 +594,18 @@ class FourM(nn.Module):
                 # If there are no logits / targets, set mod_loss to 0
                 mod_loss[mod] = torch.zeros(1, device=logits.device)
             else:
-                loss = F.cross_entropy(logits, target_ids[decoder_mod_mask == idx].long(), reduction="mean")
+                loss = F.cross_entropy(logits, target_ids[decoder_mod_mask == idx].long(), reduction='mean')
                 mod_loss[mod] = loss
 
         loss = sum(mod_loss.values()) / len(mod_loss)
 
         return loss, mod_loss
 
-    def forward_token_loss(
-        self,
-        y: torch.Tensor,
-        target_ids: torch.Tensor,
-        decoder_mod_dict: Dict[str, Any],
-        decoder_mod_mask: torch.Tensor,
-    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    def forward_token_loss(self, 
+                           y: torch.Tensor, 
+                           target_ids: torch.Tensor, 
+                           decoder_mod_dict: Dict[str, Any], 
+                           decoder_mod_mask: torch.Tensor) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """Computes the token-wise loss.
 
         Args:
@@ -678,7 +616,7 @@ class FourM(nn.Module):
 
         Returns:
             Tuple[torch.Tensor, Dict[str, torch.Tensor]]: Total token loss and dictionary of loss for each modality.
-        """
+        """        
         mod_loss = {}
         mod_count = {}
 
@@ -690,7 +628,7 @@ class FourM(nn.Module):
                 mod_loss[mod] = torch.zeros(1, device=logits.device)
                 mod_count[mod] = 0
             else:
-                loss = F.cross_entropy(logits, target_ids[decoder_mod_mask == idx].long(), reduction="mean")
+                loss = F.cross_entropy(logits, target_ids[decoder_mod_mask == idx].long(), reduction='mean')
                 mod_loss[mod] = loss
                 mod_count[mod] = logits.numel()
 
@@ -698,14 +636,13 @@ class FourM(nn.Module):
 
         return loss, mod_loss
 
-    def forward(
-        self,
-        mod_dict: Dict[str, Dict[str, torch.Tensor]],
-        num_encoder_tokens: int,
-        num_decoder_tokens: int,
-        loss_type: str = "mod",
-        return_logits: bool = False,
-    ) -> Union[Dict[str, torch.Tensor], Tuple[torch.Tensor, Dict[str, torch.Tensor]]]:
+
+    def forward(self, 
+            mod_dict: Dict[str, Dict[str, torch.Tensor]], 
+            num_encoder_tokens: int, 
+            num_decoder_tokens: int, 
+            loss_type: str = 'mod', 
+            return_logits: bool = False) -> Union[Dict[str, torch.Tensor], Tuple[torch.Tensor, Dict[str, torch.Tensor]]]:
         """
         Forward pass for the model.
 
@@ -718,32 +655,21 @@ class FourM(nn.Module):
             return_logits (bool, optional): If True, return the logits. Default is False.
 
         Returns:
-            Union[dict, tuple]:
+            Union[dict, tuple]: 
                 - If return_logits is True: Dictionary of logits for each modality.
                 - Otherwise: Tuple containing the total loss and dictionary of loss for each modality.
         """
 
         # Mod dicts
-        encoder_mod_dict = {
-            mod: self.encoder_embeddings[mod](d) for mod, d in mod_dict.items() if mod in self.encoder_embeddings
-        }
-        encoder_tokens, encoder_emb, encoder_mask, encoder_mod_mask = self.forward_mask_encoder(
-            encoder_mod_dict, num_encoder_tokens
-        )
+        encoder_mod_dict = {mod: self.encoder_embeddings[mod](d)
+                            for mod, d in mod_dict.items()
+                            if mod in self.encoder_embeddings}
+        encoder_tokens, encoder_emb, encoder_mask, encoder_mod_mask = self.forward_mask_encoder(encoder_mod_dict, num_encoder_tokens)
 
-        decoder_mod_dict = {
-            mod: self.decoder_embeddings[mod].forward_embed(d)
-            for mod, d in mod_dict.items()
-            if mod in self.decoder_embeddings
-        }
-        (
-            decoder_tokens,
-            decoder_emb,
-            decoder_mask,
-            target_ids,
-            decoder_attention_mask,
-            decoder_mod_mask,
-        ) = self.forward_mask_decoder(decoder_mod_dict, num_decoder_tokens)
+        decoder_mod_dict = {mod: self.decoder_embeddings[mod].forward_embed(d)
+                            for mod, d in mod_dict.items()
+                            if mod in self.decoder_embeddings}
+        decoder_tokens, decoder_emb, decoder_mask, target_ids, decoder_attention_mask, decoder_mod_mask = self.forward_mask_decoder(decoder_mod_dict, num_decoder_tokens)
 
         # Encoder
         x = encoder_tokens + encoder_emb
@@ -764,6 +690,7 @@ class FourM(nn.Module):
 
         return loss, mod_loss
 
+
     def freeze_encoder(self, freeze_embeddings=True):
         for param in self.encoder.parameters():
             param.requires_grad = False
@@ -776,7 +703,7 @@ class FourM(nn.Module):
                 param.requires_grad = False
 
     def freeze_encoder_except_specific_embeddings(self, frozen_embedding_domain):
-        frozen_embedding_domain = frozen_embedding_domain.split("-")
+        frozen_embedding_domain = frozen_embedding_domain.split('-')
         for param in self.encoder.parameters():
             param.requires_grad = False
 
@@ -784,7 +711,7 @@ class FourM(nn.Module):
             param.requires_grad = False
 
         for name, param in self.encoder_embeddings.named_parameters():
-            if name.split(".")[0] in frozen_embedding_domain:
+            if name.split('.')[0] in frozen_embedding_domain:
                 param.requires_grad = False
 
     def unfreeze_encoder(self, unfreeze_embeddings=True):
@@ -810,7 +737,7 @@ class FourM(nn.Module):
                 param.requires_grad = False
 
     def freeze_decoder_except_specific_embeddings(self, frozen_embedding_domain):
-        frozen_embedding_domain = frozen_embedding_domain.split("-")
+        frozen_embedding_domain = frozen_embedding_domain.split('-')
         for param in self.decoder.parameters():
             param.requires_grad = False
 
@@ -818,7 +745,7 @@ class FourM(nn.Module):
             param.requires_grad = False
 
         for name, param in self.decoder_embeddings.named_parameters():
-            if name.split(".")[0] in frozen_embedding_domain:
+            if name.split('.')[0] in frozen_embedding_domain:
                 param.requires_grad = False
 
     def unfreeze_decoder(self, unfreeze_embeddings=True):
@@ -853,73 +780,67 @@ class FourM(nn.Module):
 
 # Wrapper for easy loading with Huggingface Hub
 
-
 class FM(FourM, PyTorchModelHubMixin):
     """Wrapper around FourM for easy loading with Huggingface Hub.
 
     Args:
-        config (dict): Dictionary containing the model and modality configuration,
+        config (dict): Dictionary containing the model and modality configuration, 
             used for loading from Huggingface Hub.
     """
-
     def __init__(self, config: dict):
 
         config = copy.deepcopy(config)
 
-        all_domains = sorted(list(set(config["domains_in"]) | set(config["domains_out"])))
+        all_domains = sorted(list(set(config['domains_in']) | set(config['domains_out'])))
         modality_info = {mod: MODALITY_INFO[mod] for mod in all_domains}
 
         encoder_embeddings = {}
-        for mod in config["domains_in"]:
+        for mod in config['domains_in']:
             info = modality_info[mod]
             if info.get("encoder_embedding", None) is not None:
                 if info["type"] == "img":
-                    image_size, patch_size = info.get("input_size", config["image_size"]), info.get(
-                        "patch_size", config["patch_size"]
-                    )
+                    image_size, patch_size = info.get('input_size', config['image_size']), info.get('patch_size', config['patch_size'])
                     encoder_embeddings[mod] = info["encoder_embedding"](patch_size=patch_size, image_size=image_size)
                 else:
                     encoder_embeddings[mod] = info["encoder_embedding"]()
-
+    
         decoder_embeddings = {}
-        for mod in config["domains_out"]:
+        for mod in config['domains_out']:
             info = modality_info[mod]
             if info.get("decoder_embedding", None) is not None:
                 if info["type"] == "img":
-                    image_size, patch_size = info.get("input_size", config["image_size"]), info.get(
-                        "patch_size", config["patch_size"]
-                    )
-                    decoder_embeddings[mod] = info["decoder_embedding"](
-                        patch_size=patch_size, image_size=image_size, share_embedding=False
-                    )
+                    image_size, patch_size = info.get('input_size', config['image_size']), info.get('patch_size', config['patch_size'])
+                    decoder_embeddings[mod] = info["decoder_embedding"](patch_size=patch_size, image_size=image_size, share_embedding=False)
                 else:
                     decoder_embeddings[mod] = info["decoder_embedding"](share_embedding=False)
 
-        config["norm_layer"] = partial(LayerNorm, eps=1e-6, bias=config["norm_bias"])
-        config["act_layer"] = getattr(torch.nn, config["act_layer"])
+        config['norm_layer'] = partial(LayerNorm, eps=1e-6, bias=config['norm_bias'])
+        config['act_layer'] = getattr(torch.nn, config['act_layer'])
 
-        del config["norm_bias"]
-        del config["domains_in"]
-        del config["domains_out"]
-        del config["image_size"]
-        del config["patch_size"]
-
+        del config['norm_bias']
+        del config['domains_in']
+        del config['domains_out']
+        del config['image_size']
+        del config['patch_size']
+        
         super().__init__(
             encoder_embeddings=encoder_embeddings,
             decoder_embeddings=decoder_embeddings,
             modality_info=modality_info,
-            **config,
-        )
+            **config
+        )   
 
 
 ################################################
 
 # Model definitions
-
-
+        
 # GELU variants
 @register_model
-def fm_tiny_6e_6d_gelu(encoder_embeddings: Dict[str, nn.Module], decoder_embeddings: Dict[str, nn.Module], **kwargs):
+def fm_tiny_6e_6d_gelu(
+        encoder_embeddings: Dict[str, nn.Module],
+        decoder_embeddings: Dict[str, nn.Module],
+        **kwargs):
     model = FourM(
         encoder_embeddings=encoder_embeddings,
         decoder_embeddings=decoder_embeddings,
@@ -930,13 +851,16 @@ def fm_tiny_6e_6d_gelu(encoder_embeddings: Dict[str, nn.Module], decoder_embeddi
         mlp_ratio=4,
         qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
-        **kwargs,
+        **kwargs
     )
     return model
 
 
 @register_model
-def fm_small_8e_8d_gelu(encoder_embeddings: Dict[str, nn.Module], decoder_embeddings: Dict[str, nn.Module], **kwargs):
+def fm_small_8e_8d_gelu(
+        encoder_embeddings: Dict[str, nn.Module],
+        decoder_embeddings: Dict[str, nn.Module],
+        **kwargs):
     model = FourM(
         encoder_embeddings=encoder_embeddings,
         decoder_embeddings=decoder_embeddings,
@@ -947,13 +871,16 @@ def fm_small_8e_8d_gelu(encoder_embeddings: Dict[str, nn.Module], decoder_embedd
         mlp_ratio=4,
         qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
-        **kwargs,
+        **kwargs
     )
     return model
 
 
 @register_model
-def fm_base_12e_12d_gelu(encoder_embeddings: Dict[str, nn.Module], decoder_embeddings: Dict[str, nn.Module], **kwargs):
+def fm_base_12e_12d_gelu(
+        encoder_embeddings: Dict[str, nn.Module],
+        decoder_embeddings: Dict[str, nn.Module],
+        **kwargs):
     model = FourM(
         encoder_embeddings=encoder_embeddings,
         decoder_embeddings=decoder_embeddings,
@@ -964,13 +891,16 @@ def fm_base_12e_12d_gelu(encoder_embeddings: Dict[str, nn.Module], decoder_embed
         mlp_ratio=4,
         qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
-        **kwargs,
+        **kwargs
     )
     return model
 
 
 @register_model
-def fm_large_24e_24d_gelu(encoder_embeddings: Dict[str, nn.Module], decoder_embeddings: Dict[str, nn.Module], **kwargs):
+def fm_large_24e_24d_gelu(
+        encoder_embeddings: Dict[str, nn.Module],
+        decoder_embeddings: Dict[str, nn.Module],
+        **kwargs):
     model = FourM(
         encoder_embeddings=encoder_embeddings,
         decoder_embeddings=decoder_embeddings,
@@ -981,15 +911,15 @@ def fm_large_24e_24d_gelu(encoder_embeddings: Dict[str, nn.Module], decoder_embe
         mlp_ratio=4,
         qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
-        **kwargs,
+        **kwargs
     )
     return model
 
-
 @register_model
 def fm_xlarge_24e_24d_gelu(
-    encoder_embeddings: Dict[str, nn.Module], decoder_embeddings: Dict[str, nn.Module], **kwargs
-):
+        encoder_embeddings: Dict[str, nn.Module],
+        decoder_embeddings: Dict[str, nn.Module],
+        **kwargs):
     model = FourM(
         encoder_embeddings=encoder_embeddings,
         decoder_embeddings=decoder_embeddings,
@@ -1000,7 +930,7 @@ def fm_xlarge_24e_24d_gelu(
         mlp_ratio=4,
         qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
-        **kwargs,
+        **kwargs
     )
     return model
 
@@ -1008,8 +938,9 @@ def fm_xlarge_24e_24d_gelu(
 # SwiGLU variants
 @register_model
 def fm_tiny_6e_6d_swiglu_nobias(
-    encoder_embeddings: Dict[str, nn.Module], decoder_embeddings: Dict[str, nn.Module], **kwargs
-):
+        encoder_embeddings: Dict[str, nn.Module],
+        decoder_embeddings: Dict[str, nn.Module],
+        **kwargs):
     model = FourM(
         encoder_embeddings=encoder_embeddings,
         decoder_embeddings=decoder_embeddings,
@@ -1024,15 +955,16 @@ def fm_tiny_6e_6d_swiglu_nobias(
         norm_layer=partial(LayerNorm, eps=1e-6, bias=False),
         act_layer=nn.SiLU,
         gated_mlp=True,
-        **kwargs,
+        **kwargs
     )
     return model
 
 
 @register_model
 def fm_small_8e_8d_swiglu_nobias(
-    encoder_embeddings: Dict[str, nn.Module], decoder_embeddings: Dict[str, nn.Module], **kwargs
-):
+        encoder_embeddings: Dict[str, nn.Module],
+        decoder_embeddings: Dict[str, nn.Module],
+        **kwargs):
     model = FourM(
         encoder_embeddings=encoder_embeddings,
         decoder_embeddings=decoder_embeddings,
@@ -1047,15 +979,16 @@ def fm_small_8e_8d_swiglu_nobias(
         norm_layer=partial(LayerNorm, eps=1e-6, bias=False),
         act_layer=nn.SiLU,
         gated_mlp=True,
-        **kwargs,
+        **kwargs
     )
     return model
 
 
 @register_model
 def fm_base_12e_12d_swiglu_nobias(
-    encoder_embeddings: Dict[str, nn.Module], decoder_embeddings: Dict[str, nn.Module], **kwargs
-):
+        encoder_embeddings: Dict[str, nn.Module],
+        decoder_embeddings: Dict[str, nn.Module],
+        **kwargs):
     model = FourM(
         encoder_embeddings=encoder_embeddings,
         decoder_embeddings=decoder_embeddings,
@@ -1070,15 +1003,15 @@ def fm_base_12e_12d_swiglu_nobias(
         norm_layer=partial(LayerNorm, eps=1e-6, bias=False),
         act_layer=nn.SiLU,
         gated_mlp=True,
-        **kwargs,
+        **kwargs
     )
     return model
 
-
 @register_model
 def fm_large_24e_24d_swiglu_nobias(
-    encoder_embeddings: Dict[str, nn.Module], decoder_embeddings: Dict[str, nn.Module], **kwargs
-):
+        encoder_embeddings: Dict[str, nn.Module],
+        decoder_embeddings: Dict[str, nn.Module],
+        **kwargs):
     model = FourM(
         encoder_embeddings=encoder_embeddings,
         decoder_embeddings=decoder_embeddings,
@@ -1093,15 +1026,15 @@ def fm_large_24e_24d_swiglu_nobias(
         norm_layer=partial(LayerNorm, eps=1e-6, bias=False),
         act_layer=nn.SiLU,
         gated_mlp=True,
-        **kwargs,
+        **kwargs
     )
     return model
 
-
 @register_model
 def fm_xlarge_24e_24d_swiglu_nobias(
-    encoder_embeddings: Dict[str, nn.Module], decoder_embeddings: Dict[str, nn.Module], **kwargs
-):
+        encoder_embeddings: Dict[str, nn.Module],
+        decoder_embeddings: Dict[str, nn.Module],
+        **kwargs):
     model = FourM(
         encoder_embeddings=encoder_embeddings,
         decoder_embeddings=decoder_embeddings,
@@ -1116,18 +1049,18 @@ def fm_xlarge_24e_24d_swiglu_nobias(
         norm_layer=partial(LayerNorm, eps=1e-6, bias=False),
         act_layer=nn.SiLU,
         gated_mlp=True,
-        **kwargs,
+        **kwargs
     )
     return model
-
 
 # SwiGLU + QKNorm variants
 
 
 @register_model
 def fm_base_12e_12d_swiglu_qknorm_nobias(
-    encoder_embeddings: Dict[str, nn.Module], decoder_embeddings: Dict[str, nn.Module], **kwargs
-):
+        encoder_embeddings: Dict[str, nn.Module],
+        decoder_embeddings: Dict[str, nn.Module],
+        **kwargs):
     model = FourM(
         encoder_embeddings=encoder_embeddings,
         decoder_embeddings=decoder_embeddings,
@@ -1143,15 +1076,16 @@ def fm_base_12e_12d_swiglu_qknorm_nobias(
         act_layer=nn.SiLU,
         gated_mlp=True,
         qk_norm=True,
-        **kwargs,
+        **kwargs
     )
     return model
 
 
 @register_model
 def fm_large_24e_24d_swiglu_qknorm_nobias(
-    encoder_embeddings: Dict[str, nn.Module], decoder_embeddings: Dict[str, nn.Module], **kwargs
-):
+        encoder_embeddings: Dict[str, nn.Module],
+        decoder_embeddings: Dict[str, nn.Module],
+        **kwargs):
     model = FourM(
         encoder_embeddings=encoder_embeddings,
         decoder_embeddings=decoder_embeddings,
@@ -1167,15 +1101,15 @@ def fm_large_24e_24d_swiglu_qknorm_nobias(
         act_layer=nn.SiLU,
         gated_mlp=True,
         qk_norm=True,
-        **kwargs,
+        **kwargs
     )
     return model
 
-
 @register_model
 def fm_xlarge_24e_24d_swiglu_qknorm_nobias(
-    encoder_embeddings: Dict[str, nn.Module], decoder_embeddings: Dict[str, nn.Module], **kwargs
-):
+        encoder_embeddings: Dict[str, nn.Module],
+        decoder_embeddings: Dict[str, nn.Module],
+        **kwargs):
     model = FourM(
         encoder_embeddings=encoder_embeddings,
         decoder_embeddings=decoder_embeddings,
@@ -1191,6 +1125,6 @@ def fm_xlarge_24e_24d_swiglu_qknorm_nobias(
         act_layer=nn.SiLU,
         gated_mlp=True,
         qk_norm=True,
-        **kwargs,
+        **kwargs
     )
     return model

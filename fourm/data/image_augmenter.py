@@ -21,7 +21,8 @@ from fourm.utils import to_2tuple
 
 
 class AbstractImageAugmenter(ABC):
-    """Abstract class for image augmenters."""
+    """Abstract class for image augmenters.
+    """
 
     @abstractmethod
     def __call__(self, mod_dict, crop_settings):
@@ -29,7 +30,8 @@ class AbstractImageAugmenter(ABC):
 
 
 class RandomCropImageAugmenter(AbstractImageAugmenter):
-    def __init__(self, target_size=224, hflip=0.5, crop_scale=(0.2, 1.0), crop_ratio=(0.75, 1.3333), main_domain="rgb"):
+
+    def __init__(self, target_size=224, hflip=0.5, crop_scale=(0.2, 1.0), crop_ratio=(0.75, 1.3333), main_domain='rgb'):
 
         self.target_size = to_2tuple(target_size)
         self.hflip = hflip
@@ -56,12 +58,10 @@ class RandomCropImageAugmenter(AbstractImageAugmenter):
 
         return crop_coords, flip, orig_size, self.target_size, rand_aug_idx
 
+class NoImageAugmenter(AbstractImageAugmenter): # this is for non-image modalities like poses where we don't do any augs, e.g. during tokenization 
 
-class NoImageAugmenter(
-    AbstractImageAugmenter
-):  # this is for non-image modalities like poses where we don't do any augs, e.g. during tokenization
-    def __init__(self, no_aug=True, main_domain="human_poses"):
-        self.target_size = None  # to_2tuple(target_size)
+    def __init__(self, no_aug=True, main_domain='human_poses'):
+        self.target_size = None #to_2tuple(target_size)
         self.no_aug = no_aug
         self.main_domain = main_domain
 
@@ -69,22 +69,22 @@ class NoImageAugmenter(
         # # With torchvision 0.13+, can also be: orig_size = TF.get_dimensions(image)
         orig_size = (224, 224)
 
-        rand_aug_idx = 0
-        top, left, h, w, flip = 0, 0, 224, 224, 0
+        rand_aug_idx = 0 
+        top, left, h, w, flip = 0, 0, 224, 224, 0 
         crop_coords = (top, left, h, w)
 
         return crop_coords, flip, orig_size, self.target_size, rand_aug_idx
 
-
 class PreTokenizedImageAugmenter(AbstractImageAugmenter):
-    def __init__(self, target_size, no_aug=False, main_domain="rgb"):
+
+    def __init__(self, target_size, no_aug=False, main_domain='rgb'):
         self.target_size = to_2tuple(target_size)
         self.no_aug = no_aug
         self.main_domain = main_domain
 
     def __call__(self, mod_dict, crop_settings):
         # With torchvision 0.13+, can also be: orig_size = TF.get_dimensions(image)
-        if self.main_domain in mod_dict and "tok" not in self.main_domain:
+        if self.main_domain in mod_dict and 'tok' not in self.main_domain:
             image = mod_dict[self.main_domain] if self.main_domain is not None else mod_dict[list(mod_dict.keys())[0]]
             orig_width, orig_height = image.size
             orig_size = (orig_height, orig_width)
@@ -99,7 +99,7 @@ class PreTokenizedImageAugmenter(AbstractImageAugmenter):
 
 
 class CenterCropImageAugmenter(AbstractImageAugmenter):
-    def __init__(self, target_size, hflip=0.0, main_domain="rgb"):
+    def __init__(self, target_size, hflip=0.0, main_domain='rgb'):
         self.target_size = to_2tuple(target_size)
         self.hflip = hflip
         self.main_domain = main_domain
@@ -126,7 +126,7 @@ class CenterCropImageAugmenter(AbstractImageAugmenter):
 
 
 class PaddingImageAugmenter(AbstractImageAugmenter):
-    def __init__(self, target_size, hflip=0.0, main_domain="rgb"):
+    def __init__(self, target_size, hflip=0.0, main_domain='rgb'):
         self.target_size = to_2tuple(target_size)
         self.hflip = hflip
         self.main_domain = main_domain
@@ -146,7 +146,7 @@ class PaddingImageAugmenter(AbstractImageAugmenter):
 
 
 class ScaleJitteringImageAugmenter(AbstractImageAugmenter):
-    def __init__(self, target_size, hflip=0.0, scale=(0.1, 2.0), main_domain="rgb"):
+    def __init__(self, target_size, hflip=0.0, scale=(0.1, 2.0), main_domain='rgb'):
         self.target_size = to_2tuple(target_size)
         self.hflip = hflip
         self.scale = scale

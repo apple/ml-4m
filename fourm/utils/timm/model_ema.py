@@ -14,7 +14,7 @@ import torch.nn as nn
 
 
 class ModelEma:
-    """Model Exponential Moving Average (DEPRECATED)
+    """ Model Exponential Moving Average (DEPRECATED)
 
     Keep a moving average of everything in the model state_dict (parameters and buffers).
     This version is deprecated, it does not work with scripted models. Will be removed eventually.
@@ -36,7 +36,7 @@ class ModelEma:
     GPU assignment and distributed training wrappers.
     """
 
-    def __init__(self, model, decay=0.9999, device="", resume=""):
+    def __init__(self, model, decay=0.9999, device='', resume=''):
         # make a copy of the model for accumulating moving average of weights
         self.ema = deepcopy(model)
         self.ema.eval()
@@ -44,21 +44,21 @@ class ModelEma:
         self.device = device  # perform ema on different device from model if set
         if device:
             self.ema.to(device=device)
-        self.ema_has_module = hasattr(self.ema, "module")
+        self.ema_has_module = hasattr(self.ema, 'module')
         if resume:
             self._load_checkpoint(resume)
         for p in self.ema.parameters():
             p.requires_grad_(False)
 
     def _load_checkpoint(self, checkpoint_path):
-        checkpoint = torch.load(checkpoint_path, map_location="cpu")
+        checkpoint = torch.load(checkpoint_path, map_location='cpu')
         assert isinstance(checkpoint, dict)
-        if "state_dict_ema" in checkpoint:
+        if 'state_dict_ema' in checkpoint:
             new_state_dict = OrderedDict()
-            for k, v in checkpoint["state_dict_ema"].items():
+            for k, v in checkpoint['state_dict_ema'].items():
                 # ema model may have been wrapped by DataParallel, and need module prefix
                 if self.ema_has_module:
-                    name = "module." + k if not k.startswith("module") else k
+                    name = 'module.' + k if not k.startswith('module') else k
                 else:
                     name = k
                 new_state_dict[name] = v
@@ -69,20 +69,20 @@ class ModelEma:
 
     def update(self, model):
         # correct a mismatch in state dict keys
-        needs_module = hasattr(model, "module") and not self.ema_has_module
+        needs_module = hasattr(model, 'module') and not self.ema_has_module
         with torch.no_grad():
             msd = model.state_dict()
             for k, ema_v in self.ema.state_dict().items():
                 if needs_module:
-                    k = "module." + k
+                    k = 'module.' + k
                 model_v = msd[k].detach()
                 if self.device:
                     model_v = model_v.to(device=self.device)
-                ema_v.copy_(ema_v * self.decay + (1.0 - self.decay) * model_v)
+                ema_v.copy_(ema_v * self.decay + (1. - self.decay) * model_v)
 
 
 class ModelEmaV2(nn.Module):
-    """Model Exponential Moving Average V2
+    """ Model Exponential Moving Average V2
 
     Keep a moving average of everything in the model state_dict (parameters and buffers).
     V2 of this module is simpler, it does not match params/buffers based on name but simply
@@ -105,7 +105,7 @@ class ModelEmaV2(nn.Module):
     GPU assignment and distributed training wrappers.
     """
 
-    def __init__(self, model, decay=0.9999, device=None, resume=""):
+    def __init__(self, model, decay=0.9999, device=None, resume=''):
         super(ModelEmaV2, self).__init__()
         # make a copy of the model for accumulating moving average of weights
         self.module = deepcopy(model)
@@ -114,7 +114,7 @@ class ModelEmaV2(nn.Module):
         self.device = device  # perform ema on different device from model if set
         if device:
             self.module.to(device=device)
-        self.ema_has_module = hasattr(self.module, "module")
+        self.ema_has_module = hasattr(self.module, 'module')
         if resume:
             self._load_checkpoint(resume)
 
@@ -126,20 +126,20 @@ class ModelEmaV2(nn.Module):
                 ema_v.copy_(update_fn(ema_v, model_v))
 
     def update(self, model):
-        self._update(model, update_fn=lambda e, m: self.decay * e + (1.0 - self.decay) * m)
+        self._update(model, update_fn=lambda e, m: self.decay * e + (1. - self.decay) * m)
 
     def set(self, model):
         self._update(model, update_fn=lambda e, m: m)
 
     def _load_checkpoint(self, checkpoint_path):
-        checkpoint = torch.load(checkpoint_path, map_location="cpu")
+        checkpoint = torch.load(checkpoint_path, map_location='cpu')
         assert isinstance(checkpoint, dict)
-        if "state_dict_ema" in checkpoint:
+        if 'state_dict_ema' in checkpoint:
             new_state_dict = OrderedDict()
-            for k, v in checkpoint["state_dict_ema"].items():
+            for k, v in checkpoint['state_dict_ema'].items():
                 # ema model may have been wrapped by DataParallel, and need module prefix
                 if self.ema_has_module:
-                    name = "module." + k if not k.startswith("module") else k
+                    name = 'module.' + k if not k.startswith('module') else k
                 else:
                     name = k
                 new_state_dict[name] = v

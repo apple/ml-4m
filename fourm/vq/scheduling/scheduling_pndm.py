@@ -170,7 +170,7 @@ class PNDMScheduler(SchedulerMixin, ConfigMixin):
         self.plms_timesteps = None
         self.timesteps = None
 
-    def set_timesteps(self, num_inference_steps: int, device: Union[str, torch.device] = None, mode="leading"):
+    def set_timesteps(self, num_inference_steps: int, device: Union[str, torch.device] = None, mode='leading'):
         """
         Sets the discrete timesteps used for the diffusion chain. Supporting function to be run before inference.
 
@@ -182,7 +182,7 @@ class PNDMScheduler(SchedulerMixin, ConfigMixin):
         self.num_inference_steps = num_inference_steps
         # "linspace", "leading", "trailing" corresponds to annotation of Table 2. of https://arxiv.org/abs/2305.08891
 
-        assert mode == self.config.timestep_spacing, f"Timestep Spacing mode should be '{self.config.timestep_spacing}'"
+        assert mode == self.config.timestep_spacing, f"Timestep Spacing mode should be \'{self.config.timestep_spacing}\'"
 
         if mode == "linspace":
             self._timesteps = (

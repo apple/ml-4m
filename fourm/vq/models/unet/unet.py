@@ -41,7 +41,6 @@ from .nn import (
 def pair(t):
     return t if isinstance(t, tuple) else (t, t)
 
-
 class AttentionPool2d(nn.Module):
     """
     Adapted from CLIP: https://github.com/openai/CLIP/blob/main/clip/model.py
@@ -55,7 +54,9 @@ class AttentionPool2d(nn.Module):
         output_dim: int = None,
     ):
         super().__init__()
-        self.positional_embedding = nn.Parameter(th.randn(embed_dim, spacial_dim**2 + 1) / embed_dim**0.5)
+        self.positional_embedding = nn.Parameter(
+            th.randn(embed_dim, spacial_dim ** 2 + 1) / embed_dim ** 0.5
+        )
         self.qkv_proj = conv_nd(1, embed_dim, 3 * embed_dim, 1)
         self.c_proj = conv_nd(1, embed_dim, output_dim or embed_dim, 1)
         self.num_heads = embed_dim // num_heads_channels
@@ -120,7 +121,9 @@ class Upsample(nn.Module):
     def forward(self, x):
         assert x.shape[1] == self.channels
         if self.dims == 3:
-            x = F.interpolate(x, (x.shape[2], x.shape[3] * 2, x.shape[4] * 2), mode="nearest")
+            x = F.interpolate(
+                x, (x.shape[2], x.shape[3] * 2, x.shape[4] * 2), mode="nearest"
+            )
         else:
             x = F.interpolate(x, scale_factor=2, mode="nearest")
         if self.use_conv:
@@ -145,7 +148,9 @@ class Downsample(nn.Module):
         self.dims = dims
         stride = 2 if dims != 3 else (1, 2, 2)
         if use_conv:
-            self.op = conv_nd(dims, self.channels, self.out_channels, 3, stride=stride, padding=1)
+            self.op = conv_nd(
+                dims, self.channels, self.out_channels, 3, stride=stride, padding=1
+            )
         else:
             assert self.channels == self.out_channels
             self.op = avg_pool_nd(dims, kernel_size=stride, stride=stride)
@@ -221,13 +226,17 @@ class ResBlock(TimestepBlock):
             normalization(self.out_channels),
             nn.SiLU(),
             nn.Dropout(p=dropout),
-            zero_module(conv_nd(dims, self.out_channels, self.out_channels, 3, padding=1)),
+            zero_module(
+                conv_nd(dims, self.out_channels, self.out_channels, 3, padding=1)
+            ),
         )
 
         if self.out_channels == channels:
             self.skip_connection = nn.Identity()
         elif use_conv:
-            self.skip_connection = conv_nd(dims, channels, self.out_channels, 3, padding=1)
+            self.skip_connection = conv_nd(
+                dims, channels, self.out_channels, 3, padding=1
+            )
         else:
             self.skip_connection = conv_nd(dims, channels, self.out_channels, 1)
 
@@ -238,7 +247,9 @@ class ResBlock(TimestepBlock):
         :param emb: an [N x emb_channels] Tensor of timestep embeddings.
         :return: an [N x C x ...] Tensor of outputs.
         """
-        return checkpoint(self._forward, (x, emb), self.parameters(), self.use_checkpoint)
+        return checkpoint(
+            self._forward, (x, emb), self.parameters(), self.use_checkpoint
+        )
 
     def _forward(self, x, emb):
         if self.updown:
@@ -327,7 +338,7 @@ def count_flops_attn(model, _x, y):
     # We perform two matmuls with the same number of ops.
     # The first computes the weight matrix, the second computes
     # the combination of the value vectors.
-    matmul_ops = 2 * b * (num_spatial**2) * c
+    matmul_ops = 2 * b * (num_spatial ** 2) * c
     model.total_ops += th.DoubleTensor([matmul_ops])
 
 
@@ -351,7 +362,9 @@ class QKVAttentionLegacy(nn.Module):
         ch = width // (3 * self.n_heads)
         q, k, v = qkv.reshape(bs * self.n_heads, ch * 3, length).split(ch, dim=1)
         scale = 1 / math.sqrt(math.sqrt(ch))
-        weight = th.einsum("bct,bcs->bts", q * scale, k * scale)  # More stable with f16 than dividing afterwards
+        weight = th.einsum(
+            "bct,bcs->bts", q * scale, k * scale
+        )  # More stable with f16 than dividing afterwards
         weight = th.softmax(weight.float(), dim=-1).type(weight.dtype)
         a = th.einsum("bts,bcs->bct", weight, v)
         return a.reshape(bs, -1, length)
@@ -432,7 +445,7 @@ class UNetModel(ModelMixin, ConfigMixin):
         model_channels=256,
         out_channels=3,
         num_res_blocks=3,
-        attention_resolutions=[8, 16],
+        attention_resolutions=[8,16],
         dropout=0,
         channel_mult=(1, 2, 4, 8),
         conv_resample=True,
@@ -453,7 +466,7 @@ class UNetModel(ModelMixin, ConfigMixin):
             num_heads_upsample = num_heads
 
         self.image_size = image_size
-        self.sample_size = image_size  # For compatibility
+        self.sample_size = image_size # For compatibility
         self.in_channels = in_channels
         self.model_channels = model_channels
         self.out_channels = out_channels
@@ -480,7 +493,9 @@ class UNetModel(ModelMixin, ConfigMixin):
             self.label_emb = nn.Embedding(num_classes, time_embed_dim)
 
         ch = input_ch = int(channel_mult[0] * model_channels)
-        self.input_blocks = nn.ModuleList([TimestepEmbedSequential(conv_nd(dims, in_channels, ch, 3, padding=1))])
+        self.input_blocks = nn.ModuleList(
+            [TimestepEmbedSequential(conv_nd(dims, in_channels, ch, 3, padding=1))]
+        )
         self._feature_size = ch
         input_block_chans = [ch]
         ds = 1
@@ -526,7 +541,9 @@ class UNetModel(ModelMixin, ConfigMixin):
                             down=True,
                         )
                         if resblock_updown
-                        else Downsample(ch, conv_resample, dims=dims, out_channels=out_ch)
+                        else Downsample(
+                            ch, conv_resample, dims=dims, out_channels=out_ch
+                        )
                     )
                 )
                 ch = out_ch
@@ -661,7 +678,7 @@ class UNetModel(ModelMixin, ConfigMixin):
             assert y.shape == (x.shape[0],)
             emb = emb + self.label_emb(y)
 
-        h = x  # .type(self.dtype)
+        h = x #.type(self.dtype)
         for module in self.input_blocks:
             h = module(h, emb)
             hs.append(h)
@@ -672,18 +689,17 @@ class UNetModel(ModelMixin, ConfigMixin):
         # h = h.type(x.dtype)
         return self.out(h)
 
-
+    
 class PatchedUNetCondCat(UNetModel):
     """Patched UNet with conditioning upsampled and concatenated to input.
     For more details, see https://arxiv.org/abs/2207.04316
-
+    
     Args:
         in_channels: Number of input channels
         out_channels: Number of output channels
         cond_channels: Number of conditioning channels
         patch_size: Size of the patch projection before and after the UNet
     """
-
     def __init__(self, in_channels: int, out_channels: int, cond_channels: int, patch_size: int, *args, **kwargs):
         in_channels_p = in_channels * patch_size * patch_size + cond_channels
         out_channels_p = out_channels * patch_size * patch_size
@@ -692,46 +708,48 @@ class PatchedUNetCondCat(UNetModel):
         self.in_channels = in_channels
         self.out_channels = out_channels
 
-    def forward(
-        self,
-        sample: th.FloatTensor,  # Shape (B, C, H, W)
-        timestep: Union[th.Tensor, float, int],
-        encoder_hidden_states: th.Tensor = None,  # Shape (B, D_C, H_C, W_C)
-        cond_mask: Optional[th.BoolTensor] = None,  # Boolen tensor of shape (B, H_C, W_C). True for masked out pixels
-        **kwargs,
-    ):
+    def forward(self,
+                sample: th.FloatTensor, # Shape (B, C, H, W)
+                timestep: Union[th.Tensor, float, int],
+                encoder_hidden_states: th.Tensor = None, # Shape (B, D_C, H_C, W_C)
+                cond_mask: Optional[th.BoolTensor] = None, # Boolen tensor of shape (B, H_C, W_C). True for masked out pixels
+                **kwargs):
         B, C, H, W = sample.shape
-        assert (H % self.P_H == 0) and (
-            W % self.P_W == 0
-        ), f"Image sizes {H}x{W} must be divisible by patch sizes {self.P_H}x{self.P_W}"
-        N_H, N_W = H // self.P_H, W // self.P_W  # Number of patches in height and width
-
+        assert (H % self.P_H == 0) and (W % self.P_W == 0), f'Image sizes {H}x{W} must be divisible by patch sizes {self.P_H}x{self.P_W}'
+        N_H, N_W = H // self.P_H, W // self.P_W # Number of patches in height and width
+        
         # Patchify input from B C H W -> B (C * P_H * P_W) N_H N_W
-        x = rearrange(sample, "b c (nh ph) (nw pw) -> b (c ph pw) nh nw", ph=self.P_H, pw=self.P_W, nh=N_H, nw=N_W)
+        x = rearrange(
+            sample, 'b c (nh ph) (nw pw) -> b (c ph pw) nh nw', 
+            ph=self.P_H, pw=self.P_W, nh=N_H, nw=N_W
+        )
 
         # Optionally mask out conditioning
         if cond_mask is not None:
-            encoder_hidden_states = torch.where(cond_mask[:, None, :, :], 0.0, encoder_hidden_states)
-
+            encoder_hidden_states = torch.where(cond_mask[:,None,:,:], 0.0, encoder_hidden_states)
+        
         # Concat input with upsampled conditioning
         cond_upsampled = F.interpolate(encoder_hidden_states, (N_H, N_W), mode="nearest")
         x = th.cat([x, cond_upsampled], dim=1)
-
+        
         # UNet forward pass in subspace
         x = super().forward(x, timestep, **kwargs)
-
+        
         # Depatchify output from B (C * P_H * P_W) N_H N_W -> B C H W
-        x = rearrange(x, "b (c ph pw) nh nw -> b c (nh ph) (nw pw)", ph=self.P_H, pw=self.P_W, nh=N_H, nw=N_W)
+        x = rearrange(
+            x, 'b (c ph pw) nh nw -> b c (nh ph) (nw pw)',
+            ph=self.P_H, pw=self.P_W, nh=N_H, nw=N_W
+        )
 
         return x
-
+    
 
 def unet_patched(**kwargs):
     return PatchedUNetCondCat(
-        patch_size=4,
-        model_channels=256,
-        num_res_blocks=3,
-        attention_resolutions=[4, 8],
-        channel_mult=(1, 2, 2, 2),
-        **kwargs,
-    )
+            patch_size=4, 
+            model_channels=256, 
+            num_res_blocks=3, 
+            attention_resolutions=[4,8],
+            channel_mult=(1,2,2,2),
+            **kwargs
+        )

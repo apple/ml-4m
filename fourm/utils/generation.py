@@ -18,10 +18,9 @@ import math
 def sample_to_batch(mod_dict, device, domains):
     mod_dict = {
         modality: {k: v.unsqueeze(0).to(device, non_blocking=True) for k, v in d.items()}
-        for modality, d in mod_dict.items()
-        if modality in domains
+        for modality, d in mod_dict.items() if modality in domains
     }
-
+    
     return mod_dict
 
 
@@ -31,19 +30,19 @@ def unbatch(tensor):
 
 def batch_to_sample(mod_dict, domains):
     mod_dict = {
-        modality: {k: unbatch(v) for k, v in d.items()} for modality, d in mod_dict.items() if modality in domains
+        modality: {k: unbatch(v) for k, v in d.items()}
+        for modality, d in mod_dict.items() if modality in domains
     }
-
+    
     return mod_dict
 
 
 def batch_to_device(mod_dict, device, domains):
     mod_dict = {
         modality: {k: v.to(device, non_blocking=True) for k, v in d.items()}
-        for modality, d in mod_dict.items()
-        if modality in domains
+        for modality, d in mod_dict.items() if modality in domains
     }
-
+    
     return mod_dict
 
 
@@ -52,8 +51,7 @@ def cosine_schedule(num_steps, total_tokens):
     base_value = 1
     final_value = 0
     schedule = np.array(
-        [final_value + 0.5 * (base_value - final_value) * (1 + math.cos(math.pi * i / (len(iters)))) for i in iters]
-    )
+        [final_value + 0.5 * (base_value - final_value) * (1 + math.cos(math.pi * i / (len(iters)))) for i in iters])
     schedule_tokens = [round(total_tokens * i) for i in (schedule[:-1] - schedule[1:])]
     schedule_tokens.append(total_tokens - sum(schedule_tokens))
     return np.array(schedule_tokens)
@@ -64,7 +62,7 @@ def linear_schedule(num_steps, total_tokens):
     schedule_tokens = np.diff(schedule)[::-1]
     schedule_tokens.sort()  # Sorts the array in ascending order.
     schedule_tokens = schedule_tokens[::-1]  # Reverses the array to descending order.
-    return np.trim_zeros(schedule_tokens, "b")  # Trims trailing zeros.
+    return np.trim_zeros(schedule_tokens, 'b')  # Trims trailing zeros.
 
 
 def continue_schedule(schedule, num_current_tokens):
@@ -85,7 +83,7 @@ def decreasing_temp_schedule(max, min, token_schedule):
 def onex_temp_schedule(max_t, min_t, token_schedule, power=0.5, min_linspace=1, max_linspace=100):
     """Abitrary temperature schedule for one over x"""
     x = np.linspace(min_linspace, max_linspace, num=sum(token_schedule))
-    y = 1 / (x**power)
+    y = 1/(x**power)
     y = y - min(y)
     y = y / max(y)
     unscaled_schedule = y
@@ -97,7 +95,5 @@ def onex_temp_schedule(max_t, min_t, token_schedule, power=0.5, min_linspace=1, 
 
 
 def linear_temp_schedule(temp, token_schedule):
-    """Temperature that decays the temperature inversely proportional to the token schedule."""
-    return np.concatenate(
-        [np.array([temp * 1.0]), (temp * (token_schedule.sum() - token_schedule.cumsum()) / token_schedule.sum())[:-1]]
-    ).clip(min=1e-9)
+    """ Temperature that decays the temperature inversely proportional to the token schedule. """
+    return np.concatenate([np.array([temp * 1.0]), (temp * (token_schedule.sum() - token_schedule.cumsum()) / token_schedule.sum())[:-1]]).clip(min=1e-9)

@@ -27,22 +27,24 @@ class TimmPerceptualLoss(nn.Module):
 
     Args:
         model_id: timm model id. E.g. 'vit_base_patch14_dinov2.lvd142m'
-        feature_ids: List or hyphen-separated string of feature names to extract from the model.
+        feature_ids: List or hyphen-separated string of feature names to extract from the model. 
           For example, 'blocks.2-blocks.5-blocks.8-blocks.11'. To list all available features, use:
           ```python
           from torchvision.models.feature_extraction import get_graph_node_names
           nodes, _ = get_graph_node_names(model)
           ```
         feature_loss: Feature loss to use. One of ['cosine' or 'cos', 'l1' or 'mae']. Default: 'cosine'.
-          If 'l1' or 'mae' is used, the features will be normalized first. If 'cosine' or 'cos' is
-          used, the features will not be normalized, but the cosine similarity will be computed,
+          If 'l1' or 'mae' is used, the features will be normalized first. If 'cosine' or 'cos' is 
+          used, the features will not be normalized, but the cosine similarity will be computed, 
           which is equivalent to normalization + MSE up to a factor of 2.
     """
-
-    def __init__(self, model_id: str, feature_ids: Union[str, List[str]], feature_loss: str = "cosine"):
+    def __init__(self, 
+                 model_id: str, 
+                 feature_ids: Union[str, List[str]],
+                 feature_loss: str = 'cosine'):
         super().__init__()
 
-        feature_ids = feature_ids.split("-") if isinstance(feature_ids, str) else feature_ids
+        feature_ids = feature_ids.split('-') if isinstance(feature_ids, str) else feature_ids
 
         self.feature_ids = feature_ids
         self.feature_loss = feature_loss
@@ -52,29 +54,23 @@ class TimmPerceptualLoss(nn.Module):
 
         # Transforms to preprocess inputs to the model
         self.data_config = timm.data.resolve_model_data_config(self.model)
-        self.percept_transform = transforms.Compose(
-            [
-                transforms.Normalize((-1.0, -1.0, -1.0), (2.0, 2.0, 2.0)),  # [-1, 1] -> [0, 1]
-                transforms.Normalize(
-                    self.data_config["mean"], self.data_config["std"]
-                ),  # [0, 1] -> standardize with pre-computed statistics
-                transforms.Resize(
-                    self.data_config["input_size"][-2:], interpolation=TF.InterpolationMode.BILINEAR, antialias=True
-                ),
-            ]
-        )
+        self.percept_transform = transforms.Compose([
+            transforms.Normalize((-1.0, -1.0, -1.0), (2.0, 2.0, 2.0)), # [-1, 1] -> [0, 1]
+            transforms.Normalize(self.data_config['mean'], self.data_config['std']), # [0, 1] -> standardize with pre-computed statistics
+            transforms.Resize(self.data_config['input_size'][-2:], interpolation=TF.InterpolationMode.BILINEAR, antialias=True),
+        ])
 
     def forward(self, preds: torch.Tensor, targets: torch.Tensor, preprocess_inputs=False) -> torch.Tensor:
         """
-        Compute perceptual loss between predictions and targets. If
-        preprocess_inputs is True, it is assumed that the targets are
-        scaled to the [-1, 1] range. Predictions will be scaled
+        Compute perceptual loss between predictions and targets. If 
+        preprocess_inputs is True, it is assumed that the targets are 
+        scaled to the [-1, 1] range. Predictions will be scaled 
         assuming the same input range.
-
+        
         Args:
             preds: Predictions tensor of shape (B, C, H, W)
             targets: Targets tensor of shape (B, C, H, W)
-            preprocess_inputs: If inputs are scaled to [-1, 1], enable
+            preprocess_inputs: If inputs are scaled to [-1, 1], enable 
               this to apply model specific preprocessing. Default: False.
 
         Returns:
@@ -97,19 +93,19 @@ class TimmPerceptualLoss(nn.Module):
             feat_preds = feats_preds[feat_name]
             feat_targets = feats_targets[feat_name]
             if feat_preds.ndim == 4:
-                feat_preds = rearrange(feat_preds, "b c h w -> b (h w) c")
-                feat_targets = rearrange(feat_targets, "b c h w -> b (h w) c")
-
+                feat_preds = rearrange(feat_preds, 'b c h w -> b (h w) c')
+                feat_targets = rearrange(feat_targets, 'b c h w -> b (h w) c')
+            
             # Compute feature-wise loss
-            if self.feature_loss in ["l1", "mae"]:
+            if self.feature_loss in ['l1', 'mae']:
                 feat_preds = F.normalize(feat_preds, dim=-1)
                 feat_targets = F.normalize(feat_targets, dim=-1)
-                loss += F.l1_loss(feat_preds, feat_targets, reduction="none").sum(-1).mean(-1)
-            elif self.feature_loss in ["cosine", "cos"]:
+                loss += F.l1_loss(feat_preds, feat_targets, reduction='none').sum(-1).mean(-1)
+            elif self.feature_loss in ['cosine', 'cos']:
                 loss += 1 - F.cosine_similarity(feat_preds, feat_targets, dim=-1).mean(dim=-1)
             else:
-                raise ValueError(f"Unknown feature loss: {self.feature_loss}")
-
+                raise ValueError(f'Unknown feature loss: {self.feature_loss}')
+        
         loss /= preds.shape[0]
 
         return loss

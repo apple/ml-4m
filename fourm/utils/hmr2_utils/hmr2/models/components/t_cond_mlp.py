@@ -16,7 +16,9 @@ class AdaptiveLayerNorm1D(torch.nn.Module):
             raise ValueError(f"data_dim must be positive, but got {data_dim}")
         if norm_cond_dim <= 0:
             raise ValueError(f"norm_cond_dim must be positive, but got {norm_cond_dim}")
-        self.norm = torch.nn.LayerNorm(data_dim)  # TODO: Check if elementwise_affine=True is correct
+        self.norm = torch.nn.LayerNorm(
+            data_dim
+        )  # TODO: Check if elementwise_affine=True is correct
         self.linear = torch.nn.Linear(norm_cond_dim, 2 * data_dim)
         torch.nn.init.zeros_(self.linear.weight)
         torch.nn.init.zeros_(self.linear.bias)
@@ -94,7 +96,11 @@ def create_simple_mlp(
     layers = []
     prev_dim = input_dim
     for hidden_dim in hidden_dims:
-        layers.extend(linear_norm_activ_dropout(prev_dim, hidden_dim, activation, bias, norm, dropout, norm_cond_dim))
+        layers.extend(
+            linear_norm_activ_dropout(
+                prev_dim, hidden_dim, activation, bias, norm, dropout, norm_cond_dim
+            )
+        )
         prev_dim = hidden_dim
     layers.append(torch.nn.Linear(prev_dim, output_dim, bias=bias))
     return SequentialCond(*layers)
@@ -115,13 +121,17 @@ class ResidualMLPBlock(torch.nn.Module):
     ):
         super().__init__()
         if not (input_dim == output_dim == hidden_dim):
-            raise NotImplementedError(f"input_dim {input_dim} != output_dim {output_dim} is not implemented")
+            raise NotImplementedError(
+                f"input_dim {input_dim} != output_dim {output_dim} is not implemented"
+            )
 
         layers = []
         prev_dim = input_dim
         for i in range(num_hidden_layers):
             layers.append(
-                linear_norm_activ_dropout(prev_dim, hidden_dim, activation, bias, norm, dropout, norm_cond_dim)
+                linear_norm_activ_dropout(
+                    prev_dim, hidden_dim, activation, bias, norm, dropout, norm_cond_dim
+                )
             )
             prev_dim = hidden_dim
         self.model = SequentialCond(*layers)
@@ -148,7 +158,9 @@ class ResidualMLP(torch.nn.Module):
         super().__init__()
         self.input_dim = input_dim
         self.model = SequentialCond(
-            linear_norm_activ_dropout(input_dim, hidden_dim, activation, bias, norm, dropout, norm_cond_dim),
+            linear_norm_activ_dropout(
+                input_dim, hidden_dim, activation, bias, norm, dropout, norm_cond_dim
+            ),
             *[
                 ResidualMLPBlock(
                     hidden_dim,
@@ -185,5 +197,8 @@ class FrequencyEmbedder(torch.nn.Module):
         scaled = self.frequencies.view(1, 1, -1) * x_unsqueezed  # (N, D, num_frequencies)
         s = torch.sin(scaled)
         c = torch.cos(scaled)
-        embedded = torch.cat([s, c, x_unsqueezed], dim=-1).view(N, -1)  # (N, D * 2 * num_frequencies + D)
+        embedded = torch.cat([s, c, x_unsqueezed], dim=-1).view(
+            N, -1
+        )  # (N, D * 2 * num_frequencies + D)
         return embedded
+

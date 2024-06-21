@@ -20,7 +20,11 @@ class BottleneckBlock(nn.Module):
     def __init__(self, thin, wide):
         super(BottleneckBlock, self).__init__()
 
-        self.block = nn.Sequential(nn.Linear(thin, wide), nn.GELU(), nn.Linear(wide, thin))
+        self.block = nn.Sequential(
+            nn.Linear(thin, wide), 
+            nn.GELU(), 
+            nn.Linear(wide, thin)
+        )
 
     def forward(self, x):
         out = self.block(x)
@@ -49,7 +53,7 @@ class StandardMLP(nn.Module):
         # If x is an image, apply MLP point-wise to each token/pixel
         if x.ndim == 4:
             _, _, H, W = x.shape
-            x = rearrange(x, "b d h w -> b (h w) d")
+            x = rearrange(x, 'b d h w -> b (h w) d')
             x_is_image = True
         else:
             x_is_image = False
@@ -63,7 +67,7 @@ class StandardMLP(nn.Module):
 
         # If x was an image, rearrange back to image
         if x_is_image:
-            out = rearrange(out, "b (h w) d -> b d h w", h=H, w=W)
+            out = rearrange(out, 'b (h w) d -> b d h w', h=H, w=W)
 
         return out
 
@@ -92,7 +96,7 @@ class BottleneckMLP(nn.Module):
         # If x is an image, apply MLP point-wise to each token/pixel
         if x.ndim == 4:
             _, _, H, W = x.shape
-            x = rearrange(x, "b d h w -> b (h w) d")
+            x = rearrange(x, 'b d h w -> b (h w) d')
             x_is_image = True
         else:
             x_is_image = False
@@ -106,17 +110,18 @@ class BottleneckMLP(nn.Module):
 
         # If x was an image, rearrange back to image
         if x_is_image:
-            out = rearrange(out, "b (h w) d -> b d h w", h=H, w=W)
+            out = rearrange(out, 'b (h w) d -> b d h w', h=H, w=W)
 
         return out
 
 
-def build_mlp(
-    model_id: str = "BottleneckMLP/B_6-Wi_1024", dim_in: Optional[int] = None, dim_out: Optional[int] = None, **kwargs
-) -> nn.Module:
+def build_mlp(model_id: str = "BottleneckMLP/B_6-Wi_1024", 
+              dim_in: Optional[int] = None, 
+              dim_out: Optional[int] = None, 
+              **kwargs) -> nn.Module:
     """Constructs an MLP model from a model ID string, see
     "Scaling MLPs: A Tale of Inductive Bias" (https://arxiv.org/abs/2306.13575).
-
+    
     Args:
         model_id: Model ID string. E.g. "BottleneckMLP/B_6-Wi_1024".
           See https://arxiv.org/abs/2306.13575 for options and details.
