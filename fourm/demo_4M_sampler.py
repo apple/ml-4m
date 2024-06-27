@@ -402,7 +402,7 @@ class Demo4MSampler(nn.Module):
         
         return sample_sr, schedule_sr
 
-    def forward(self, sample, seed: Optional[int] = None, top_p: float = 0.8, top_k: float = 0.0, target_modalities: Optional[List[str]] = None):
+    def forward(self, sample, seed: Optional[int] = None, top_p: float = 0.8, top_k: float = 0.0, target_modalities: Optional[List[str]] = None, perform_sr: bool = True):
         seed = seed or np.random.randint(np.iinfo(np.int64).max)
         
         # Prepare the generation parameters and sample
@@ -423,7 +423,7 @@ class Demo4MSampler(nn.Module):
         )
         
         # Optional upsampling to 448x448
-        if self.sampler_fm_sr is not None:
+        if self.sampler_fm_sr is not None and perform_sr:
             cond_domains_sr, target_domains_sr = self.__setup_sr_conds_and_targets(out_dict)
             sample_sr, generation_schedule_sr = self.__setup_sr_sample_and_schedule(out_dict, cond_domains_sr, target_domains_sr)
     
