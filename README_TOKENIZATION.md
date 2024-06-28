@@ -43,7 +43,7 @@ resolution_step: 32
 This feature is intended to be used as an adaptation step, after training the model at a fixed base resolution. The resulting tokenizers can then work at different resolutions, which allows us to train a super-resolution adaptation of 4M that maps tokens from 224x224 images to tokens from 448x448 images.
 
 ### Training a decoder with a frozen encoder
-This is mostly relevant for training diffusion decoders on top of a frozen pre-trained VQ-VAE encoder, but our original 4M-7 RGB, depth, and surface normal tokenizers were trained with a diffusion decoder from scratch. Rather than performing the training end-to-end, we currently suggest first training a standard VQ-VAE to have more control over the learned representation, and then training a diffusion decoder afterwards. When training a diffusion decoder on top of a frozen VQ-VAE encoder, make sure to add the follwing lines to the config:
+This is mostly relevant for training diffusion decoders on top of a frozen pre-trained VQ-VAE encoder, but our original 4M-7 RGB, depth, and surface normal tokenizers were trained with a diffusion decoder from scratch. Rather than performing the training end-to-end, we currently suggest first training a standard VQ-VAE to have more control over the learned representation, and then training a diffusion decoder afterwards. When training a diffusion decoder on top of a frozen VQ-VAE encoder, make sure to add the following lines to the config:
 
 ```yaml
 full_ckpt: /path/to/checkpoint.pth
