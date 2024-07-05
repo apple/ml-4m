@@ -31,7 +31,7 @@ import torchvision.transforms.functional as TF
 # Metrics 
 from torchmetrics.image.fid import FrechetInceptionDistance
 from torchmetrics.image.inception import InceptionScore
-from torchmetrics.multimodal import CLIPScore
+from torchmetrics.multimodal.clip_score import CLIPScore
 
 # Tokenizers (text & image modalities)
 from tokenizers import Tokenizer
