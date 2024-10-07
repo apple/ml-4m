@@ -11,7 +11,7 @@ Official implementation and pre-trained models for :
 [**4M: Massively Multimodal Masked Modeling**](https://arxiv.org/abs/2312.06647), NeurIPS 2023 (Spotlight) <br>
 *[David Mizrahi](https://dmizrahi.com/)\*, [Roman Bachmann](https://roman-bachmann.github.io/)\*, [Oğuzhan Fatih Kar](https://ofkar.github.io/), [Teresa Yeo](https://aserety.github.io/), [Mingfei Gao](https://fly6464.github.io/), [Afshin Dehghan](https://www.afshindehghan.com/), [Amir Zamir](https://vilab.epfl.ch/zamir/)*
 
-[**4M-21: An Any-to-Any Vision Model for Tens of Tasks and Modalities**](https://arxiv.org/abs/2406.09406), arXiv 2024 <br>
+[**4M-21: An Any-to-Any Vision Model for Tens of Tasks and Modalities**](https://arxiv.org/abs/2406.09406), NeurIPS 2024 <br>
 *[Roman Bachmann](https://roman-bachmann.github.io/)\*, [Oğuzhan Fatih Kar](https://ofkar.github.io/)\*, [David Mizrahi](https://dmizrahi.com/)\*, [Ali Garjani](https://garjania.github.io/), [Mingfei Gao](https://fly6464.github.io/), [David Griffiths](https://www.dgriffiths.uk/), [Jiaming Hu](https://scholar.google.com/citations?user=vm3imKsAAAAJ&hl=en), [Afshin Dehghan](https://www.afshindehghan.com/), [Amir Zamir](https://vilab.epfl.ch/zamir/)*
 
 <br>
