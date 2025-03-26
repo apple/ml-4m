@@ -258,6 +258,8 @@ class Demo4MSampler(nn.Module):
             self.mods_sr = mods_sr or list(set(fm_sr.encoder_modalities) | set(fm_sr.decoder_modalities))
         else:
             self.sampler_fm_sr = None
+            self.mods_sr = []
+
 
         # Load tokenizers
         self.toks = {}
