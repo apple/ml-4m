@@ -576,7 +576,7 @@ class UViT(ModelMixin, ConfigMixin):
                  in_channels: int = 3,
                  out_channels: int = 3,
                  patch_size: int = 4,
-                 block_out_channels: Tuple[int] = (128, 256, 512),
+                 block_out_channels: Tuple[int, ...] = (128, 256, 512),
                  layers_per_block: Union[int, Tuple[int]] = 2,
                  downsample_before_mid: bool = False,
                  
