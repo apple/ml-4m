@@ -17,7 +17,6 @@
 # --------------------------------------------------------
 import io
 import os
-import ast
 import json
 from pathlib import Path
 from safetensors.torch import load as load_st
@@ -156,16 +155,6 @@ def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, mode
             _load_checkpoint_for_ema(model_ema, {'state_dict_ema': checkpoint['model_ema']})
             print("With EMA!")
 
-def parse_metadata(metadata_str):
-    metadata = {}
-    for k, v in metadata_str.items():
-        try:
-            v_parsed = ast.literal_eval(v)
-        except:
-            v_parsed = v
-        metadata[k] = v_parsed
-    return metadata
-
 def load_safetensors(safetensors_path, return_metadata=True):
     with open(safetensors_path, 'rb') as f:
         data = f.read()
@@ -180,6 +169,5 @@ def load_safetensors(safetensors_path, return_metadata=True):
     metadata_bytes = data[8 : 8 + n]
     header = json.loads(metadata_bytes)
     metadata = header.get("__metadata__", {})
-    metadata = parse_metadata(metadata)
 
     return tensors, metadata

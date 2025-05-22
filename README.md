@@ -63,6 +63,12 @@ print(torch.cuda.is_available())  # Should return True
 ```
 If CUDA is not available, consider re-installing PyTorch following the [official installation instructions](https://pytorch.org/get-started/locally/). Likewise, if you want to install xFormers (optional, for faster tokenizers), follow [their README](https://github.com/facebookresearch/xformers) to ensure that the CUDA version is correct.
 
+4. (Optional) Expose the new conda environment as a kernel to Jupyter notebooks:
+```bash
+pip install ipykernel
+python -m ipykernel install --user --name fourm --display-name "4M (fourm)"
+```
+
 ### Getting started
 
 We provide a demo wrapper to quickly get started with using 4M models for RGB-to-all or {caption, bounding boxes}-to-all generation tasks.
