@@ -157,6 +157,8 @@ def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, mode
             print("With EMA!")
 
 
+MAX_LEN_YAML_PARSE = 10_000
+
 def safe_parse_metadata(metadata_str):
     metadata = {}
     for k, v in metadata_str.items():
